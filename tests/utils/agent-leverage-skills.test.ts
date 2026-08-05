@@ -288,7 +288,10 @@ describe('script behaviour against a stub worker', () => {
       res.statusCode = 404;
       res.end('{}');
     });
-    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    // No host: bind the wildcard so both ::1 and 127.0.0.1 are served. The
+    // scripts dial `localhost`, which resolves to either depending on the
+    // runner's /etc/hosts — binding one family invites a host-specific failure.
+    await new Promise<void>(resolve => server.listen(0, resolve));
     port = (server.address() as AddressInfo).port;
   });
 
