@@ -10,13 +10,21 @@ const SKILLS_DIR = join(import.meta.dir, '../../plugin/skills');
  * different kind of agent fan-out; three bundle a script that does the counting
  * so the agents only spend tokens on judgment.
  */
-const SKILLS = [
-  // workerCommand: a command that needs the worker and no required flags, so the
-  // unreachable-worker path is what actually gets exercised.
+interface SkillSpec {
+  name: string;
+  /** Bundled script, or null for the two skills that need no script. */
+  script: string | null;
+  commands: string[];
+  /** A command that needs the worker and takes no required flags, so the
+   *  unreachable-worker path is what actually gets exercised. */
+  workerCommand: string | null;
+}
+
+const SKILLS: SkillSpec[] = [
   { name: 'scar-tissue', script: 'scars.mjs', commands: ['changed', 'history', 'map'], workerCommand: 'map' },
-  { name: 'decision-decay', script: null, commands: [] },
+  { name: 'decision-decay', script: null, commands: [], workerCommand: null },
   { name: 'prompt-forensics', script: 'forensics.mjs', commands: ['sessions', 'prompts'], workerCommand: 'sessions' },
-  { name: 'cross-pollinate', script: null, commands: [] },
+  { name: 'cross-pollinate', script: null, commands: [], workerCommand: null },
   { name: 'truth-decay', script: 'rot.mjs', commands: ['scan', 'files'], workerCommand: 'scan' },
 ];
 
