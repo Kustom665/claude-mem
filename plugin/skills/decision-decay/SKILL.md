@@ -144,11 +144,22 @@ clear-cut ones:
 - **Re-ratify** — the decision still stands; the violations are bugs. Hand the
   violating sites to `/make-plan` as a cleanup.
 - **Repeal** — reality won; the decision was wrong or overtaken. Record the
-  repeal with the `memory_add` MCP tool so the next audit sees `REVERSED`
-  instead of re-flagging the same drift forever.
+  repeal so the next audit sees `REVERSED` instead of re-flagging the same drift
+  forever:
 
-Write the outcome back into the ledger. An audit that ends without a recorded
-disposition will produce the identical report next quarter.
+  ```bash
+  node "${CLAUDE_SKILL_DIR}/../flywheel/wheel.mjs" record \
+    --stage decision-decay --kind repeal \
+    --summary "<decision> repealed: <what replaced it>" \
+    --refs <decision observation IDs>
+  ```
+
+  Use `--kind reratified` for the other outcome, and `--open` for anything left
+  undecided. Do not use the `memory_add` / `observation_add` MCP tools — they
+  require the server-beta runtime and throw on a default SQLite install.
+
+Write the outcome back into the ledger too. An audit that ends without a
+recorded disposition will produce the identical report next quarter.
 
 ## Failure Modes
 

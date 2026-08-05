@@ -118,10 +118,19 @@ Write the plan:
 
 ## Phase 4 — Close the loop
 
-After the transplant lands, record an observation (`memory_add` MCP tool) that
-names both projects and the fact that this pattern travelled. The next
-cross-pollination run finds *that* observation first and skips straight to the
-answer. Repeat this a few times and the fleet starts compounding.
+After the transplant lands, record that this pattern travelled:
+
+```bash
+node "${CLAUDE_SKILL_DIR}/../flywheel/wheel.mjs" record \
+  --stage cross-pollinate --kind transplant \
+  --summary "<mechanism> ported from <source project> to <this project>" \
+  --refs <source observation IDs> --files <files you changed>
+```
+
+The next cross-pollination run reads that first (`wheel recall --stage
+cross-pollinate`) and skips straight to the answer. Repeat a few times and the
+fleet starts compounding. Do not use the `memory_add` / `observation_add` MCP
+tools — they require the server-beta runtime and throw on a default install.
 
 ## Failure Modes
 

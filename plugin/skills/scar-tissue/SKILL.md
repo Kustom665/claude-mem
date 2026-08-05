@@ -131,12 +131,25 @@ Synthesize yourself; do not delegate this. Lead with the answer:
 If everything is CLEAR, say so in two sentences. A clean review that reads like
 a clean review is the point; padding it with hedges destroys the signal.
 
-## Optional — leave the scar in memory
+## Close the loop — leave the scar in memory
 
 When the review finds a genuine recurrence, record it so the *next* review
-inherits it. Use the `memory_add` MCP tool (or `observation_add`) with the
-finding and the observation ID it recurred from. A scar that keeps reopening is
-the strongest refactor argument you will ever have.
+inherits it:
+
+```bash
+node "${CLAUDE_SKILL_DIR}/../flywheel/wheel.mjs" record \
+  --stage scar-tissue --kind recurrence \
+  --summary "<what reopened, in one line>" \
+  --refs <original observation IDs> --files <path> --open
+```
+
+That writes to the wheel's local state *and* back into memory, so a future
+session sees it through ordinary context injection without running this skill.
+Do not use the `memory_add` / `observation_add` MCP tools for this — they
+require the server-beta runtime and throw on a default SQLite install.
+
+A scar that keeps reopening is the strongest refactor argument you will ever
+have, and `wheel recall --stage scar-tissue` is where that argument accumulates.
 
 ## Failure Modes
 

@@ -109,13 +109,24 @@ Cap at ~8 agents; take the worst signals first and say what you deferred.
 Group the verdicts and put them to the user — nothing here happens silently.
 
 - **TRUE** — no action. Report the count; it's the reassuring number.
-- **MOVED** — the highest-value outcome. Record a correcting observation
-  (`memory_add` MCP tool) that states the current location and references the
-  stale ID. Future retrieval surfaces the correction alongside the original.
-- **FALSE** — propose a correcting observation that explicitly supersedes it
-  ("as of `<date>`, X is no longer true; Y is"). Ask before writing.
-- **UNVERIFIABLE** — leave alone. Note them so the next run doesn't re-spend
-  agents on the same unresolvable set.
+- **MOVED** — the highest-value outcome. Record a correction stating the current
+  location and referencing the stale ID, so future retrieval surfaces the
+  correction alongside the original:
+
+  ```bash
+  node "${CLAUDE_SKILL_DIR}/../flywheel/wheel.mjs" record \
+    --stage truth-decay --kind correction \
+    --summary "<old claim> is stale: <what is true now>" \
+    --refs <stale observation IDs> --files <current paths>
+  ```
+
+  Use this rather than the `memory_add` / `observation_add` MCP tools — those
+  require the server-beta runtime and throw on a default SQLite install.
+- **FALSE** — propose the same kind of correction, explicitly superseding ("as
+  of `<date>`, X is no longer true; Y is"). Ask before writing.
+- **UNVERIFIABLE** — leave alone, and record the set once with `--kind
+  unverifiable --open` so the next run skips it instead of re-spending agents on
+  the same unresolvable batch.
 
 **Prefer superseding over deleting.** A correction is auditable, reversible, and
 carries the history of what changed; a deletion is silent and permanent. Only

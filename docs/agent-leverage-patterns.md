@@ -18,6 +18,7 @@ reports that arrive without observation IDs and `file:line` citations.
 | `prompt-forensics` | a critique of the brief | one agent per cluster of sessions | a CLAUDE.md patch |
 | `cross-pollinate` | a cross-repo parts bin | one agent per foreign project | transplant plan |
 | `truth-decay` | an immune system | one agent per batch of suspect memories | corrections |
+| `flywheel` | a pipeline that compounds | sequences the five, dispatches none | cadence + carried findings |
 
 ## 1. `scar-tissue` — the diff meets its own history
 
@@ -108,23 +109,83 @@ Why it's non-obvious: everyone builds memory ingestion. Almost nobody builds the
 immune system, and it's the thing that decides whether the archive is still worth
 trusting in year two.
 
+## The wheel — `flywheel`
+
+Five skills run once each is five reports. What makes them compound is that each
+run starts where the last one ended, and that requires two things the individual
+skills can't provide themselves: **an order**, and **a record**.
+
+The order is a dependency chain, not a preference:
+
+```
+truth-decay ──▶ decision-decay ──▶ cross-pollinate ──▶ prompt-forensics
+   clean            audit              harvest              tune
+
+scar-tissue ──▶ runs on every diff, off the clock entirely
+```
+
+`truth-decay` goes first because every later stage reads memory — audit against
+un-verified memory and you spend agent budget laundering stale claims into
+confident-looking reports. `scar-tissue` is deliberately outside the cycle: it's
+gated on a diff, not a clock, and putting it on a timer would be theatre.
+
+The record is `wheel.mjs`, which keeps two, on purpose:
+
+- **Local state** (`~/.claude-mem/flywheel/<project>.json`) — deterministic,
+  survives a stopped worker, written temp-then-rename so a crash can't truncate
+  it. This is what `due` and `recall` actually read, and what the cadence and
+  open-item carry are built on.
+- **Memory write-back** (`POST /api/memory/save`, tagged `CMFLYWHEEL`) — the
+  compounding part: findings reach future sessions through ordinary context
+  injection, with no skill invoked at all.
+
+Write-back deliberately does **not** use the `memory_add` / `observation_add`
+MCP tools: both call `requireServerBetaForObservationTool` and throw on a default
+SQLite install. `/api/memory/save` is the path that works on both runtimes.
+
+It is also best-effort. If the worker is down, the finding is still written to
+local state and you get a warning — a lost finding is never acceptable, because
+the finding is the entire product of an expensive agent fan-out.
+
+Each stage consumes its own prior findings, which is the actual mechanism:
+
+- **truth-decay** skips the batch it already ruled UNVERIFIABLE
+- **decision-decay** sees prior repeals as REVERSED instead of re-flagging drift
+- **cross-pollinate** finds the recorded transplant and skips to the answer
+- **prompt-forensics** compares against its recorded baseline — the only way to
+  learn whether a CLAUDE.md rule actually worked
+- **scar-tissue** weights its review toward files with confirmed recurrences
+
 ## Running them
 
-All five are Claude Code skills in `plugin/skills/`. Invoke by name (`/scar-tissue`)
-or just describe the task — the descriptions are written to trigger on natural
-phrasings ("will this reopen an old bug?", "are we still following our own
-architecture?", "have I solved this before?").
+All six are Claude Code skills in `plugin/skills/`. Invoke by name
+(`/scar-tissue`, `/flywheel`) or just describe the task — the descriptions are
+written to trigger on natural phrasings ("will this reopen an old bug?", "are we
+still following our own architecture?", "have I solved this before?", "what's
+due?").
 
-The three bundled scripts need the worker running and resolve its port from
-`CLAUDE_MEM_WORKER_PORT`, then `~/.claude-mem/settings.json`. Each fails with one
-clear line if the worker is unreachable:
+Start with the wheel, which tells you what's worth running:
+
+```bash
+node "${CLAUDE_SKILL_DIR}/wheel.mjs" due
+node "${CLAUDE_SKILL_DIR}/wheel.mjs" recall --limit 30
+```
+
+The four analysis scripts need the worker running and resolve its port from
+`CLAUDE_MEM_WORKER_PORT`, then `~/.claude-mem/settings.json`. The three that
+can't work without it fail with one clear line:
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/scars.mjs" --help       # scar-tissue
 node "${CLAUDE_SKILL_DIR}/forensics.mjs" --help   # prompt-forensics
 node "${CLAUDE_SKILL_DIR}/rot.mjs" --help         # truth-decay
+node "${CLAUDE_SKILL_DIR}/wheel.mjs" --help       # flywheel
 ```
 
 `decision-decay` and `cross-pollinate` need no script — they run on the worker's
 HTTP API and the MCP tools (`search`, `timeline`, `get_observations`,
-`smart_search`, `memory_add`) directly.
+`smart_search`) directly.
+
+The wheel only compounds if it turns. Once the cadence is settled, schedule it
+where the memory lives — cron (`0 9 * * 1 cd /repo && claude -p "/flywheel"`) or
+a SessionStart hook that runs `wheel due` and mentions anything overdue.

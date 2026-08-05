@@ -133,9 +133,20 @@ CLAUDE.md is the user's instrument. Show the proposed rules with the evidence
 next to each one and use `AskUserQuestion` to let them accept, reject, or edit
 per rule. Apply only what they accept.
 
-Then close the loop: state which rules landed and what they should cost-save.
-Re-run this skill in a month against sessions *after* the patch — if friction
-didn't move, the rules were wrong and you now know that too.
+Then close the loop. Record which rules landed, with the friction they were
+meant to remove, so the next run can measure them instead of re-deriving them:
+
+```bash
+node "${CLAUDE_SKILL_DIR}/../flywheel/wheel.mjs" record \
+  --stage prompt-forensics --kind rule-applied \
+  --summary "<rule> — targets <pattern>, baseline friction <n> across <m> sessions"
+```
+
+Re-run this skill in a month against sessions *after* the patch. Start by
+reading `wheel recall --stage prompt-forensics` for the baseline, then compare.
+If friction didn't move, the rules were wrong — record that too (`--kind
+rule-ineffective`), because a rule that doesn't work should be removed from
+CLAUDE.md rather than left to accumulate.
 
 ## Failure Modes
 
