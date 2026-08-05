@@ -104,14 +104,69 @@ Cap at ~8 agents; take the worst signals first and say what you deferred.
 >
 > Never edit, delete, or write memory. Report only.
 
-## Phase 3 — Disposition (you decide, the user approves)
+## Phase 3 — Check what would get written (FAN OUT)
+
+`TRUE` and `UNVERIFIABLE` change nothing, so they need no scrutiny. `MOVED` and
+`FALSE` both **write to memory** — and a wrong correction is worse than the
+stale memory it replaces, because it arrives with a fresh timestamp and gets
+injected into future sessions as current fact. Verify in proportion to that.
+
+### `MOVED` — mechanical check, no agent
+
+The claim survives; only the path changed. So the only thing to verify is that
+the new path is real:
+
+```bash
+test -e "<new path>" && echo present || echo MISSING
+```
+
+`MISSING` means the agent guessed. Send that one back rather than panelling it —
+an agent that can't name a path that exists hasn't found where the code went.
+
+### `FALSE` — refutation panel
+
+`FALSE` authorizes writing "X is no longer true" into a store that future
+sessions read without question. Three refuters per `FALSE`, one message,
+different lenses — a wrong `FALSE` fails in three distinct ways:
+
+| Lens | The question | The mistake it catches |
+|---|---|---|
+| **Claim** | Is the memory actually asserting what the verifier thinks? | Read the title, not the narrative; contradicted a claim never made |
+| **Relocation** | Does the code still do this somewhere else? | Confused "moved" with "gone" |
+| **Environment** | Is the tree being read the right one? | Wrong branch, dirty worktree, generated files absent, submodule not checked out |
+
+### Refuter brief
+
+> You are trying to **refute** a claim that a stored memory is now false.
+> Assume the claim is wrong and look for the reason.
+>
+> **Memory `#<id>`:** fetch the full record with `get_observations` — do not
+> work from the title.
+> **The verdict to refute:** `<the FALSE verdict and its evidence, verbatim>`
+> **Your lens: `<claim | relocation | environment>`** — `<the question above>`
+>
+> Return exactly:
+>
+> - `LENS:`
+> - `REFUTED:` `true` | `false`
+> - `WHY:` specific, with `file:line` or the git output you read differently.
+>
+> **If you cannot establish either way, return `refuted: true`.** An unproven
+> `FALSE` should not become a correction. Leaving a stale memory costs a little
+> confusion; writing a false correction costs the store's credibility.
+
+**Two of three refute → the verdict drops to `UNVERIFIABLE`.** No correction gets
+written, and it joins the recorded unverifiable set so the next run doesn't
+re-spend agents on it.
+
+## Phase 4 — Disposition (you decide, the user approves)
 
 Group the verdicts and put them to the user — nothing here happens silently.
 
 - **TRUE** — no action. Report the count; it's the reassuring number.
-- **MOVED** — the highest-value outcome. Record a correction stating the current
-  location and referencing the stale ID, so future retrieval surfaces the
-  correction alongside the original:
+- **MOVED** — the highest-value outcome, once the new path passed the `test -e`
+  check. Record a correction stating the current location and referencing the
+  stale ID, so future retrieval surfaces the correction alongside the original:
 
   ```bash
   node "${CLAUDE_SKILL_DIR}/../flywheel/wheel.mjs" record \
@@ -122,20 +177,23 @@ Group the verdicts and put them to the user — nothing here happens silently.
 
   Use this rather than the `memory_add` / `observation_add` MCP tools — those
   require the server-beta runtime and throw on a default SQLite install.
-- **FALSE** — propose the same kind of correction, explicitly superseding ("as
-  of `<date>`, X is no longer true; Y is"). Ask before writing.
+- **FALSE** — only the ones that survived the panel. Propose the same kind of
+  correction, explicitly superseding ("as of `<date>`, X is no longer true; Y
+  is"), and note the vote in the summary. Ask before writing.
 - **UNVERIFIABLE** — leave alone, and record the set once with `--kind
   unverifiable --open` so the next run skips it instead of re-spending agents on
-  the same unresolvable batch.
+  the same unresolvable batch. Panel-killed `FALSE` verdicts land here too.
 
 **Prefer superseding over deleting.** A correction is auditable, reversible, and
 carries the history of what changed; a deletion is silent and permanent. Only
 raise deletion if the user explicitly wants pruning, and confirm the specific IDs
 first with `AskUserQuestion`.
 
-## Phase 4 — Report
+## Phase 5 — Report
 
 - Scanned / flagged / verified counts, and the split across the four statuses
+- How many `FALSE` verdicts the panel killed — a high kill rate means the
+  verifiers are over-calling and the next run should batch more tightly
 - The corrections written, with IDs
 - The vanished files with the widest blast radius — usually one rename that the
   user can confirm in a second
@@ -144,8 +202,14 @@ first with `AskUserQuestion`.
 ## Failure Modes
 
 - **Trusting the file check.** `rot.mjs` proves a path doesn't resolve, nothing
-  more. Every FALSE needs an agent's evidence behind it.
+  more. Every FALSE needs an agent's evidence behind it, then a panel's failure
+  to refute it.
 - **Deleting on suspicion.** Stale-but-recoverable beats gone. Supersede.
+- **Panelling the harmless verdicts.** `TRUE` and `UNVERIFIABLE` write nothing.
+  Spend the agents on what changes the store.
+- **Refuters that review instead of refute.** Ask an agent whether a finding is
+  good and it will usually agree. Ask it to kill the finding, and make
+  can't-establish count as refuted.
 - **One agent per observation.** Related memories share one investigation —
   batching is what makes this affordable.
 - **Verifying against a dirty tree or the wrong branch.** Check `git status` and

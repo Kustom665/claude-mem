@@ -11,6 +11,20 @@ Counting in a script is cheap, deterministic, and reviewable. Judgment in an
 agent is expensive and needs evidence contracts — so every skill here refuses
 reports that arrive without observation IDs and `file:line` citations.
 
+Two verdicts get a second layer, because they're the ones that cost something
+when wrong: `scar-tissue`'s **REOPENS** blocks a commit, and `truth-decay`'s
+**FALSE** writes a correction that future sessions read as fact. Each goes to
+three refuters prompted to *kill* the finding — with three different lenses, not
+three copies of the same brief, since identical agents make identical mistakes
+and return a unanimous wrong answer that then looks verified. Two of three
+refute and the verdict dies. Can't-establish counts as refuted, so the tie-break
+always falls toward not acting.
+
+Everything else is deliberately single-agent. Panelling `CLEAR` would triple the
+cost of the common path to catch almost nothing, and `truth-decay`'s `MOVED` is
+better checked with `test -e` than with an agent. Voting on "did we find
+something" is theatre; voting on "is this finding real" is not.
+
 | Skill | Memory becomes | Fan-out unit | Output |
 |---|---|---|---|
 | `scar-tissue` | a regression oracle | one agent per scarred file | pre-merge verdict |

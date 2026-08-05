@@ -116,14 +116,70 @@ A report that claims `REOPENS` without an observation ID **and** a `file:line`
 from the diff is not evidence. Send it back once with: "cite the observation ID
 and the exact hunk, or downgrade to CLEAR."
 
-## Phase 4 — The verdict (you write it)
+## Phase 4 — Refute the blockers (FAN OUT)
+
+`REOPENS` blocks a commit. A verdict that expensive should have to survive
+someone trying to kill it — one agent's pattern-match is not enough to stand in
+front of someone's work.
+
+**Panel only the `REOPENS` verdicts.** Not `CLEAR`, not `WEAKENS`. Verifying a
+negative means redoing the whole review, and `CLEAR` is the common case — panel
+it and you triple the cost of the boring path to catch almost nothing. `WEAKENS`
+is already a soft flag that blocks nobody.
+
+For each `REOPENS`, dispatch **three refuters in one message**, each with a
+different lens, because a false blocker fails in three distinct ways:
+
+| Lens | The question | The mistake it catches |
+|---|---|---|
+| **Bug** | Is the old bug what the reviewer thinks it is? | Misread the observation; matched on topic, not mechanism |
+| **Diff** | Does the change actually touch that guard? | Misread the hunk; the lines moved but the logic didn't |
+| **Codebase** | Is the guard still present somewhere else? | Missed that protection relocated — extracted, hoisted, moved to a caller |
+
+Three identical skeptics would all make the same mistake. These three can't.
+
+### Refuter brief
+
+> You are trying to **refute** a claim that a code change reopens an old bug.
+> Assume it is wrong and look for the reason. You are not reviewing the code.
+>
+> **Claim:** `<the REOPENS verdict, verbatim>`
+> **Original bug:** observation `#<id>` — fetch it with `get_observations`
+> **The hunk:** `<file:line>`
+> **Your lens: `<bug | diff | codebase>`** — `<the question from the table>`
+>
+> Return exactly:
+>
+> - `LENS:`
+> - `REFUTED:` `true` | `false`
+> - `WHY:` the specific reason, with `file:line` or the observation text you're
+>   reading differently. "Seems fine" is not a refutation; neither is "seems bad."
+>
+> **If you cannot establish either way, return `refuted: true`.** A blocker that
+> can't be demonstrated shouldn't block. The cost of a wrong block is someone's
+> good work stopped and their trust in this review gone; the cost of a missed
+> one is a bug we already know how to find.
+
+**Two of three refute → the blocker dies.** Downgrade it to `WEAKENS`, keep it
+in the report as a soft flag with the refuters' reasoning, and say it was
+downgraded. Don't delete it silently — the reviewer's instinct was worth
+recording even when the panel overruled it.
+
+**The asymmetry is real and you should name it.** A false `CLEAR` — a missed
+regression — gets no panel. The only guard against it is the `SCARS CONSIDERED`
+list every agent must return: if an agent cleared a file without naming the
+scars it dismissed, that's a lazy CLEAR, and redeploying it costs one agent
+rather than three.
+
+## Phase 5 — The verdict (you write it)
 
 Synthesize yourself; do not delegate this. Lead with the answer:
 
-1. **Blockers** — every `REOPENS`, one paragraph each: the old bug, the new
-   hunk, what will break. Cite `#<id>` and `file:line`.
+1. **Blockers** — every `REOPENS` that survived the panel, one paragraph each:
+   the old bug, the new hunk, what will break. Cite `#<id>` and `file:line`, and
+   note the vote (e.g. "0 of 3 refuted").
 2. **Soft flags** — every `WEAKENS`: what got thinner and whether that's
-   deliberate.
+   deliberate. Include blockers the panel downgraded, with the refuters' reason.
 3. **Cleared** — one line: "N files reviewed against M scars, no recurrence."
 4. **Not reviewed** — files you dropped, and why (no scars / over the cap /
    generated).
@@ -138,10 +194,14 @@ inherits it:
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/../flywheel/wheel.mjs" record \
-  --stage scar-tissue --kind recurrence \
-  --summary "<what reopened, in one line>" \
+  --stage scar-tissue --kind recurrence-confirmed \
+  --summary "<what reopened, in one line> (panel: <n> of 3 refuted)" \
   --refs <original observation IDs> --files <path> --open
 ```
+
+Only record recurrences that survived Phase 4. A finding the panel killed is not
+a scar, and writing it back would poison every future review of that file with a
+recurrence that never happened.
 
 That writes to the wheel's local state *and* back into memory, so a future
 session sees it through ordinary context injection without running this skill.
@@ -163,3 +223,11 @@ have, and `wheel recall --stage scar-tissue` is where that argument accumulates.
 - **Verdict inflation** — if every file comes back `REOPENS`, the agents are
   pattern-matching on topic, not mechanism. Redeploy with: "the same *failure*
   must recur, not the same subject area."
+- **Panelling everything** — three refuters on every `CLEAR` triples the cost of
+  the common path to catch almost nothing. Panel what blocks.
+- **A panel of clones** — three agents given the same brief make the same
+  mistake and return a unanimous wrong answer that now *looks* verified. The
+  three lenses are the point, not the number three.
+- **Refuters that review instead of refute** — an agent asked "is this finding
+  good?" will usually say yes. Ask it to kill the finding, and make
+  can't-establish count as refuted.

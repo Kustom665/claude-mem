@@ -133,6 +133,68 @@ describe('agent-leverage skills', () => {
     });
   }
 
+  /**
+   * Two verdicts write to something expensive: scar-tissue's REOPENS blocks a
+   * commit, truth-decay's FALSE writes a correction future sessions read as
+   * fact. Both go through a refutation panel; the cheap verdicts deliberately
+   * do not, because panelling everything just triples the cost of the common
+   * path.
+   */
+  describe('adversarial verification', () => {
+    const PANELLED = [
+      { skill: 'scar-tissue', verdict: 'REOPENS', lenses: ['Bug', 'Diff', 'Codebase'] },
+      { skill: 'truth-decay', verdict: 'FALSE', lenses: ['Claim', 'Relocation', 'Environment'] },
+    ];
+
+    for (const { skill, verdict, lenses } of PANELLED) {
+      const content = () => readFileSync(join(SKILLS_DIR, skill, 'SKILL.md'), 'utf-8');
+
+      it(`${skill} panels its ${verdict} verdict`, () => {
+        expect(content()).toContain('Refuter brief');
+        expect(content()).toMatch(/refute/i);
+      });
+
+      it(`${skill} gives each refuter a distinct lens`, () => {
+        // Three clones make the same mistake and return a unanimous wrong
+        // answer that then looks verified. Diversity is the mechanism.
+        for (const lens of lenses) expect(content()).toContain(`**${lens}**`);
+      });
+
+      it(`${skill} treats can't-establish as refuted`, () => {
+        // The tie-break has to fall toward not acting, in both skills: an
+        // unproven blocker shouldn't block, an unproven FALSE shouldn't write.
+        expect(content()).toContain('return `refuted: true`');
+      });
+
+      it(`${skill} kills the verdict on a majority`, () => {
+        expect(content()).toContain('Two of three refute');
+      });
+    }
+
+    it('scar-tissue does not panel the cheap verdicts', () => {
+      const content = readFileSync(join(SKILLS_DIR, 'scar-tissue/SKILL.md'), 'utf-8');
+      expect(content).toContain('**Panel only the `REOPENS` verdicts.**');
+    });
+
+    it('scar-tissue names the false-CLEAR asymmetry rather than hiding it', () => {
+      // A missed regression gets no panel. That limit is stated on purpose.
+      const content = readFileSync(join(SKILLS_DIR, 'scar-tissue/SKILL.md'), 'utf-8');
+      expect(content).toContain('SCARS CONSIDERED');
+      expect(content).toMatch(/asymmetry/i);
+    });
+
+    it('truth-decay verifies MOVED mechanically instead of with agents', () => {
+      const content = readFileSync(join(SKILLS_DIR, 'truth-decay/SKILL.md'), 'utf-8');
+      expect(content).toContain('test -e');
+    });
+
+    it('scar-tissue only records recurrences that survived the panel', () => {
+      const content = readFileSync(join(SKILLS_DIR, 'scar-tissue/SKILL.md'), 'utf-8');
+      expect(content).toContain('recurrence-confirmed');
+      expect(content).toContain('Only record recurrences that survived');
+    });
+  });
+
   describe('pipeline ordering', () => {
     it('flywheel documents the stages in dependency order', () => {
       const content = readFileSync(join(SKILLS_DIR, 'flywheel/SKILL.md'), 'utf-8');
