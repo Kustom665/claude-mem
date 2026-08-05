@@ -83,6 +83,22 @@ function repoRoot() {
 
 function posix(p) { return p.split(sep).join('/'); }
 
+/**
+ * The two path forms an observation may have stored for this file: absolute, or
+ * project-root-relative. These are exactly what /api/observations/by-file
+ * matches on, and it matches by string equality.
+ *
+ * Suffix matching is tempting here and is wrong: `src/components/index.ts` ends
+ * with `/index.ts`, so a fix that touched a root-level `index.ts` would be
+ * scored as a scar on a file it never opened. Since the endpoint already
+ * selected this observation by exact equality, use the same exactness to decide
+ * which list it matched.
+ */
+function pathCandidates(root, file) {
+  const abs = isAbsolute(file) ? file : resolve(root, file);
+  return [posix(abs), posix(relative(root, abs))];
+}
+
 function parseFileList(raw) {
   if (!raw) return [];
   try {
@@ -150,10 +166,8 @@ function changedFiles(root, base) {
  * have stored either form — so always ask with both.
  */
 async function observationsForFile(root, file, { project, limit }) {
-  const abs = isAbsolute(file) ? file : resolve(root, file);
   const params = new URLSearchParams();
-  params.append('path', posix(abs));
-  params.append('path', posix(relative(root, abs)));
+  for (const candidate of pathCandidates(root, file)) params.append('path', candidate);
   if (project) params.set('projects', project);
   params.set('limit', String(Math.min(Number(limit) || 25, 100)));
   const body = await api(`/api/observations/by-file?${params.toString()}`);
@@ -197,10 +211,10 @@ async function cmdHistory(args) {
     limit: args.limit,
   });
 
-  const root_rel = posix(relative(root, isAbsolute(file) ? file : resolve(root, file)));
+  const candidates = new Set(pathCandidates(root, file));
   const rows = observations.map(obs => {
     const modified = parseFileList(obs.files_modified).map(posix);
-    const wasModified = modified.some(f => f === root_rel || f.endsWith(`/${root_rel}`) || root_rel.endsWith(f));
+    const wasModified = modified.some(f => candidates.has(f));
     return {
     id: obs.id,
     type: obs.type,

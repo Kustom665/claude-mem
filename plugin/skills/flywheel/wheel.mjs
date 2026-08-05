@@ -28,7 +28,7 @@
  *   complete --stage           mark a stage run finished
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync, openSync, closeSync, unlinkSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -155,14 +155,65 @@ function loadState(project) {
   }
 }
 
-/** Write via temp + rename so a crash mid-write can't truncate the wheel's state. */
+/**
+ * Write via temp + rename so a crash mid-write can't truncate the wheel's state.
+ * Each writer gets its own temp name — a shared `.tmp` is itself a race.
+ */
 function saveState(state) {
   const path = statePath(state.project);
   mkdirSync(dirname(path), { recursive: true });
-  const tmp = `${path}.tmp`;
+  const tmp = `${path}.${process.pid}.tmp`;
   writeFileSync(tmp, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
   renameSync(tmp, path);
   return path;
+}
+
+const LOCK_STALE_MS = 30_000;
+
+/**
+ * Exclusive lock around read-modify-write.
+ *
+ * Every skill in this pipeline fans agents out in parallel and tells each one to
+ * record what it found. Without this, six concurrent `record` calls collapse to
+ * one surviving finding: each process reads the same state, appends its own
+ * entry, and the last writer wins. Silently — every call reports success. The
+ * whole promise of the wheel is that a finding is never lost, so the lock is
+ * load-bearing, not defensive.
+ *
+ * Held for microseconds: callers do their network I/O before acquiring.
+ */
+function withLock(project, fn) {
+  const path = `${statePath(project)}.lock`;
+  mkdirSync(dirname(path), { recursive: true });
+
+  let fd = null;
+  const deadline = Date.now() + LOCK_STALE_MS;
+  while (fd === null) {
+    try {
+      fd = openSync(path, 'wx');
+    } catch (err) {
+      if (err.code !== 'EEXIST') throw err;
+      // A crashed process leaves its lock behind; reclaim it once it's stale.
+      try {
+        if (Date.now() - statSync(path).mtimeMs > LOCK_STALE_MS) {
+          unlinkSync(path);
+          continue;
+        }
+      } catch { /* lock vanished under us — just retry */ }
+      if (Date.now() > deadline) die(`could not lock ${path} after ${LOCK_STALE_MS}ms — delete it if no other run is active`);
+      // Busy-wait: contention windows here are milliseconds, and a sleep would
+      // need async plumbing through every caller for no real gain.
+      const spinUntil = Date.now() + 5 + Math.floor(process.pid % 15);
+      while (Date.now() < spinUntil) { /* spin */ }
+    }
+  }
+
+  try {
+    return fn();
+  } finally {
+    closeSync(fd);
+    try { unlinkSync(path); } catch { /* already gone */ }
+  }
 }
 
 function daysSince(iso) {
@@ -236,9 +287,10 @@ async function cmdRecord(args, project) {
   const files = String(args.files && args.files !== true ? args.files : '')
     .split(',').map(s => s.trim()).filter(Boolean);
 
-  const state = loadState(project);
   const finding = {
-    id: (state.findings.reduce((max, f) => Math.max(max, Number(f.id) || 0), 0)) + 1,
+    // id is assigned under the lock — deriving it from an unlocked read hands
+    // concurrent writers the same number.
+    id: null,
     stage,
     kind: str(args.kind) ?? 'finding',
     summary,
@@ -249,8 +301,10 @@ async function cmdRecord(args, project) {
     memory_id: null,
   };
 
-  // Memory write-back is best-effort: the local record is the source of truth,
-  // so a stopped worker must not lose the finding.
+  // Memory write-back happens BEFORE the lock: it is a network round trip, and
+  // holding the lock across it would serialize every parallel agent behind it.
+  // Best-effort either way — the local record is the source of truth, so a
+  // stopped worker must not lose the finding.
   if (!args['no-memory']) {
     const lines = [
       `${MARKER} ${stage} ${finding.kind}`,
@@ -278,8 +332,12 @@ async function cmdRecord(args, project) {
     }
   }
 
-  state.findings.push(finding);
-  const path = saveState(state);
+  const path = withLock(project, () => {
+    const state = loadState(project);
+    finding.id = state.findings.reduce((max, f) => Math.max(max, Number(f.id) || 0), 0) + 1;
+    state.findings.push(finding);
+    return saveState(state);
+  });
 
   if (args.json) { process.stdout.write(`${JSON.stringify(finding, null, 2)}\n`); return; }
   process.stdout.write(`recorded #${finding.id} [${stage}]${finding.memory_id ? ` → observation #${finding.memory_id}` : ''}\n${path}\n`);
@@ -325,22 +383,26 @@ function cmdComplete(args, project) {
   if (!stage) die(`complete needs --stage (${STAGES.join(', ')})`);
   if (!STAGES.includes(stage)) die(`unknown stage "${stage}" (${STAGES.join(', ')})`);
 
-  const state = loadState(project);
-  const prior = state.stages[stage] ?? {};
-  state.stages[stage] = {
-    last_run: new Date().toISOString(),
-    runs: (Number(prior.runs) || 0) + 1,
-    ...(str(args.note) ? { last_note: str(args.note) } : {}),
-  };
-
   const closing = String(args.close && args.close !== true ? args.close : '')
     .split(',').map(s => s.trim()).filter(Boolean);
-  for (const f of state.findings) {
-    if (closing.includes(String(f.id))) f.open = false;
-  }
 
-  const path = saveState(state);
-  process.stdout.write(`${stage} run ${state.stages[stage].runs} recorded${closing.length ? `, closed ${closing.length} item(s)` : ''}\n${path}\n`);
+  // Same lock as record: a stage closing while agents are still recording must
+  // not roll back their findings.
+  const { path, runs } = withLock(project, () => {
+    const state = loadState(project);
+    const prior = state.stages[stage] ?? {};
+    state.stages[stage] = {
+      last_run: new Date().toISOString(),
+      runs: (Number(prior.runs) || 0) + 1,
+      ...(str(args.note) ? { last_note: str(args.note) } : {}),
+    };
+    for (const f of state.findings) {
+      if (closing.includes(String(f.id))) f.open = false;
+    }
+    return { path: saveState(state), runs: state.stages[stage].runs };
+  });
+
+  process.stdout.write(`${stage} run ${runs} recorded${closing.length ? `, closed ${closing.length} item(s)` : ''}\n${path}\n`);
 }
 
 // ── entry ───────────────────────────────────────────────────────────────

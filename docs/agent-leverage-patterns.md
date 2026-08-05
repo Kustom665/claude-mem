@@ -147,8 +147,10 @@ The record is `wheel.mjs`, which keeps two, on purpose:
 
 - **Local state** (`~/.claude-mem/flywheel/<project>.json`) — deterministic,
   survives a stopped worker, written temp-then-rename so a crash can't truncate
-  it. This is what `due` and `recall` actually read, and what the cadence and
-  open-item carry are built on.
+  it, and **locked**, because every stage fans agents out in parallel and tells
+  each one to record. Unlocked, eight concurrent records collapsed to one
+  surviving finding, silently. This is what `due` and `recall` actually read,
+  and what the cadence and open-item carry are built on.
 - **Memory write-back** (`POST /api/memory/save`, tagged `CMFLYWHEEL`) — the
   compounding part: findings reach future sessions through ordinary context
   injection, with no skill invoked at all.

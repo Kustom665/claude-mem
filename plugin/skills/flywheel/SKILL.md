@@ -53,6 +53,12 @@ Two records, on purpose:
 - **Local state** — `~/.claude-mem/flywheel/<project>.json`. Deterministic,
   survives a stopped worker, written temp-then-rename so a crash can't truncate
   it. This is what `due` and `recall` actually read.
+
+  Writes take an exclusive lock, because every stage here fans agents out in
+  parallel and tells each one to record what it found. Unlocked, concurrent
+  `record` calls collapse to a single surviving finding — each process reads the
+  same state, appends, last writer wins — silently, with every call reporting
+  success. A lock left by a crashed writer is reclaimed after 30s.
 - **Memory write-back** — `POST /api/memory/save`, tagged `CMFLYWHEEL`. This is
   the compounding part: findings reach future sessions through ordinary context
   injection, with no skill invoked at all.

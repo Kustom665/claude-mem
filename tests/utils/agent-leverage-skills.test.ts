@@ -1,8 +1,11 @@
-import { describe, it, expect, afterAll } from 'bun:test';
-import { existsSync, readFileSync, mkdtempSync, rmSync } from 'fs';
+import { describe, it, expect, afterAll, beforeAll } from 'bun:test';
+import { createServer } from 'http';
+import { spawn } from 'child_process';
+import type { AddressInfo } from 'net';
+import { existsSync, readFileSync, mkdtempSync, rmSync, writeFileSync, utimesSync, mkdirSync, unlinkSync } from 'fs';
 import { spawnSync } from 'child_process';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { join, dirname } from 'path';
 
 const SKILLS_DIR = join(import.meta.dir, '../../plugin/skills');
 
@@ -36,6 +39,25 @@ const SKILLS: SkillSpec[] = [
 
 /** Stages the pipeline sequences, in the order flywheel documents. */
 const PIPELINE_ORDER = ['truth-decay', 'decision-decay', 'cross-pollinate', 'prompt-forensics'];
+
+/**
+ * Async spawn — NOT spawnSync. Two reasons, both learned the hard way:
+ *
+ *  1. spawnSync blocks this process's event loop, so an in-process stub server
+ *     can never answer the child's request. Guaranteed deadlock.
+ *  2. spawnSync wrapped in a Promise still runs sequentially, which makes a
+ *     "concurrent writers" test a no-op that passes with the race present.
+ */
+function runNode(args: string[], env: NodeJS.ProcessEnv = {}): Promise<{ status: number | null; stdout: string; stderr: string }> {
+  return new Promise(resolve => {
+    const child = spawn('node', args, { env: { ...process.env, ...env } });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', chunk => { stdout += chunk; });
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    child.on('close', status => resolve({ status, stdout, stderr }));
+  });
+}
 
 function frontmatter(content: string): string {
   expect(content.startsWith('---\n')).toBe(true);
@@ -205,6 +227,179 @@ describe('agent-leverage skills', () => {
       const sorted = [...positions].sort((a, b) => a - b);
       expect(positions).toEqual(sorted);
     });
+  });
+});
+
+describe('script behaviour against a stub worker', () => {
+  // Two real bugs lived here and neither was reachable without an endpoint:
+  // scar-tissue scored an unrelated fix as a scar via suffix matching, and
+  // prompt-forensics scored older sessions as zero-turn instead of excluding
+  // them. Both need a worker to reproduce, so the test brings one.
+  const now = Date.now();
+
+  const OBSERVATIONS = [
+    {
+      // Modified a DIFFERENT, shorter-named file; only read ours.
+      id: 501, project: 'demo', type: 'bugfix', title: 'Fix root index export',
+      files_modified: JSON.stringify(['index.ts']),
+      files_read: JSON.stringify(['src/components/index.ts']),
+      created_at: '2026-07-01', created_at_epoch: now - 86_400_000,
+    },
+    {
+      id: 502, project: 'demo', type: 'bugfix', title: 'Fix null deref in upload',
+      files_modified: JSON.stringify(['src/upload.ts']), files_read: null,
+      created_at: '2026-07-02', created_at_epoch: now - 86_400_000,
+    },
+  ];
+
+  const PROMPTS = [
+    { id: 1, content_session_id: 'sess-new', project: 'demo', prompt_number: 1, prompt_text: 'fix the thing', created_at: '', created_at_epoch: now },
+  ];
+  const SUMMARIES = [
+    { id: 11, session_id: 'sess-new', project: 'demo', request: 'r', completed: '', next_steps: 'more', created_at: '', created_at_epoch: now },
+    // Older session whose prompts fall outside any prompt window.
+    { id: 12, session_id: 'sess-old', project: 'demo', request: 'r', completed: 'done', next_steps: '', created_at: '', created_at_epoch: now - 999 },
+  ];
+
+  let server: ReturnType<typeof createServer>;
+  let port = 0;
+
+  beforeAll(async () => {
+    server = createServer((req, res) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      res.setHeader('content-type', 'application/json');
+      const page = (items: unknown[]) => {
+        const offset = Number(url.searchParams.get('offset') ?? 0);
+        const limit = Math.min(Number(url.searchParams.get('limit') ?? 20), 100);
+        const slice = items.slice(offset, offset + limit);
+        return JSON.stringify({ items: slice, hasMore: offset + slice.length < items.length, offset, limit });
+      };
+
+      if (url.pathname === '/api/observations/by-file') {
+        const paths = url.searchParams.getAll('path');
+        const matched = OBSERVATIONS.filter(o =>
+          [o.files_modified, o.files_read].filter(Boolean)
+            .flatMap(v => JSON.parse(v as string) as string[])
+            .some(f => paths.includes(f)));
+        return res.end(JSON.stringify({ observations: matched, count: matched.length }));
+      }
+      if (url.pathname === '/api/prompts') return res.end(page(PROMPTS));
+      if (url.pathname === '/api/summaries') return res.end(page(SUMMARIES));
+      res.statusCode = 404;
+      res.end('{}');
+    });
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    port = (server.address() as AddressInfo).port;
+  });
+
+  afterAll(async () => { await new Promise<void>(resolve => { server.close(() => resolve()); }); });
+
+  const run = (script: string, ...args: string[]) =>
+    runNode([join(SKILLS_DIR, script), ...args], { CLAUDE_MEM_WORKER_PORT: String(port) });
+
+  it('does not score an unrelated fix as a scar via path-suffix matching', async () => {
+    // `src/components/index.ts` ends with `/index.ts`, so suffix matching turned
+    // a root-level index.ts fix into a scar on a file it never modified.
+    const out = await run('scar-tissue/scars.mjs', 'history', '--file', 'src/components/index.ts', '--project', 'demo', '--json');
+    const rows = JSON.parse(out.stdout);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].touch).toBe('read');
+    expect(rows[0].scar).toBe(false);
+  });
+
+  it('still scores a genuine modification as a scar', async () => {
+    const out = await run('scar-tissue/scars.mjs', 'history', '--file', 'src/upload.ts', '--project', 'demo', '--json');
+    const rows = JSON.parse(out.stdout);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].touch).toBe('modified');
+    expect(rows[0].scar).toBe(true);
+  });
+
+  it('excludes sessions with no prompts in the window instead of scoring them zero-turn', async () => {
+    const out = await run('prompt-forensics/forensics.mjs', 'sessions', '--project', 'demo', '--scan', '2', '--prompt-scan', '1');
+    expect(out.stdout).toContain('1 session(s) EXCLUDED');
+    // sess-old must not appear at all — a silent zero-turn row would rank it as
+    // low-friction, which is a claim the data does not support.
+    expect(out.stdout).not.toContain('sess-old');
+  });
+
+  it('scans prompts deeper than sessions by default', async () => {
+    // Many prompts per session: equal budgets cover far fewer sessions on the
+    // prompt side, which is what produced the phantom zero-turn rows.
+    const help = await run('prompt-forensics/forensics.mjs', '--help');
+    expect(help.stdout).toContain('--prompt-scan');
+    expect(help.stdout).toContain('5x --scan');
+  });
+});
+
+describe('flywheel concurrency', () => {
+  // Every skill in this pipeline fans agents out in parallel and tells each one
+  // to record what it found. Before locking, 6 concurrent records collapsed to
+  // 1 survivor — silently, with every call reporting success.
+  const home = mkdtempSync(join(tmpdir(), 'cm-wheel-race-'));
+  const wheel = join(SKILLS_DIR, 'flywheel/wheel.mjs');
+
+  afterAll(() => rmSync(home, { recursive: true, force: true }));
+
+  it('loses no findings when 8 agents record at once', async () => {
+    // All 8 launched before any is awaited — genuinely overlapping. Done with
+    // spawnSync these would serialize and the test would pass with the race
+    // still present.
+    const writers = Array.from({ length: 8 }, (_, i) => runNode([
+      wheel, 'record', '--stage', 'scar-tissue',
+      '--summary', `concurrent finding ${i}`, '--no-memory', '--project', 'race',
+    ], { HOME: home }));
+
+    const results = await Promise.all(writers);
+    expect(results.every(r => r.status === 0)).toBe(true);
+
+    const recalled = JSON.parse((await runNode(
+      [wheel, 'recall', '--limit', '50', '--json', '--project', 'race'],
+      { HOME: home },
+    )).stdout);
+
+    expect(recalled.local).toHaveLength(8);
+    // Ids derived from an unlocked read hand concurrent writers the same number.
+    expect(new Set(recalled.local.map((f: { id: number }) => f.id)).size).toBe(8);
+  });
+
+  it('actually excludes a second writer while the lock is held', async () => {
+    // The 8-writer test above cannot prove the lock exists: with network I/O
+    // moved outside the critical section, the window is microseconds and eight
+    // staggered process starts rarely collide — it passes even with no lock at
+    // all. This asserts the contract directly: a held lock must block.
+    const lock = join(home, '.claude-mem', 'flywheel', 'excl.json.lock');
+    mkdirSync(dirname(lock), { recursive: true });
+    writeFileSync(lock, '');
+
+    const pending = runNode([
+      wheel, 'record', '--stage', 'scar-tissue', '--summary', 'blocked',
+      '--no-memory', '--project', 'excl',
+    ], { HOME: home });
+
+    const stillBlocked = Symbol('blocked');
+    const raced = await Promise.race([
+      pending,
+      new Promise(resolve => setTimeout(() => resolve(stillBlocked), 500)),
+    ]);
+    expect(raced).toBe(stillBlocked);
+
+    unlinkSync(lock);
+    expect((await pending).status).toBe(0);
+  });
+
+  it('reclaims a stale lock rather than deadlocking forever', async () => {
+    const lock = join(home, '.claude-mem', 'flywheel', 'race.json.lock');
+    writeFileSync(lock, '');
+    // Backdate past the staleness window, as a crashed writer would leave it.
+    const old = new Date(Date.now() - 120_000);
+    utimesSync(lock, old, old);
+
+    const result = await runNode([
+      wheel, 'record', '--stage', 'scar-tissue', '--summary', 'after crash',
+      '--no-memory', '--project', 'race',
+    ], { HOME: home });
+    expect(result.status).toBe(0);
   });
 });
 

@@ -118,10 +118,16 @@ function friction({ turns, unfinished, noCompletion }) {
 
 async function cmdSessions(args) {
   const project = args.project && args.project !== true ? args.project : null;
-  const scan = args.scan;
+  const scan = Math.max(1, Number(args.scan) || 1000);
+
+  // Both feeds are newest-first, but there are many prompts per session — so an
+  // equal budget covers far fewer sessions on the prompt side. Scanning them at
+  // the same depth silently scores older sessions as zero-turn and buries them
+  // at the bottom of a ranking that claims to be about friction.
+  const promptScan = Math.max(1, Number(args['prompt-scan']) || scan * 5);
 
   const [prompts, summaries] = await Promise.all([
-    collect('/api/prompts', { project, scan }),
+    collect('/api/prompts', { project, scan: promptScan }),
     collect('/api/summaries', { project, scan }),
   ]);
 
@@ -140,7 +146,9 @@ async function cmdSessions(args) {
   }
 
   const minTurns = Number(args['min-turns']) || 0;
+  const uncovered = summaries.filter(s => !bySession.has(s.session_id)).length;
   const rows = summaries
+    .filter(summary => bySession.has(summary.session_id))
     .map(summary => {
       const key = summary.session_id;
       const counted = bySession.get(key) || { turns: 0, opening: null, project: summary.project };
@@ -165,6 +173,11 @@ async function cmdSessions(args) {
 
   emit(args, rows, list => {
     process.stdout.write(`${summaries.length} session(s) / ${prompts.length} prompt(s) scanned${project ? ` in ${project}` : ''}\n`);
+    if (uncovered > 0) {
+      // Never silently drop them: a ranking that quietly omits a third of the
+      // history reads exactly like one that covered everything.
+      process.stdout.write(`${uncovered} session(s) EXCLUDED — no prompts within the scan window; raise --prompt-scan to include them\n`);
+    }
     process.stdout.write('friction = turns + 3 if next_steps left open + 2 if nothing recorded as completed\n\n');
     process.stdout.write('SCORE  TURNS  FLAGS  OPENING PROMPT\n');
     for (const r of list) {
@@ -217,8 +230,12 @@ const commands = { sessions: cmdSessions, prompts: cmdPrompts };
 if (!command || args.help) {
   process.stdout.write(`forensics — rank your own briefs by what they cost
 
-  forensics sessions [--project P] [--scan N] [--top N] [--min-turns N] [--json]
+  forensics sessions [--project P] [--scan N] [--prompt-scan N] [--top N] [--min-turns N] [--json]
   forensics prompts --session ID [--project P] [--scan N] [--json]
+
+--scan bounds sessions; --prompt-scan bounds prompts and defaults to 5x --scan,
+since there are many prompts per session. Sessions with no prompts in the window
+are excluded and counted, never scored as zero-turn.
 
 Worker port resolves from CLAUDE_MEM_WORKER_PORT, then ~/.claude-mem/settings.json.
 `);
