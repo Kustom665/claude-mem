@@ -1,0 +1,828 @@
+<title>名残 — Ghosting Garden</title>
+<style>
+/* ── Shippori Mincho (SIL OFL 1.1) — display, Latin + subset kanji ───────── */
+@font-face{font-family:"Shippori Mincho";font-style:normal;font-weight:400;font-display:swap;
+  src:url(data:font/woff2;base64,__SM400__) format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:"Shippori Mincho";font-style:normal;font-weight:600;font-display:swap;
+  src:url(data:font/woff2;base64,__SM600__) format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:"Shippori Mincho";font-style:normal;font-weight:400;font-display:swap;
+  src:url(data:font/woff2;base64,__SMJP__) format("woff2");
+  unicode-range:U+2E80-2FDF,U+3000-303F,U+3040-30FF,U+4E00-9FFF,U+FF00-FFEF;}
+
+/* ── Zen Kaku Gothic New (SIL OFL 1.1) — body / UI ──────────────────────── */
+@font-face{font-family:"Zen Kaku Gothic New";font-style:normal;font-weight:400;font-display:swap;
+  src:url(data:font/woff2;base64,__ZK400__) format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:"Zen Kaku Gothic New";font-style:normal;font-weight:500;font-display:swap;
+  src:url(data:font/woff2;base64,__ZK500__) format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+
+/* ══ Tokens ═══════════════════════════════════════════════════════════════ */
+:root{
+  --sand:#DEE0D8; --sand-2:#D4D7CD;
+  --groove:#ADB3A4; --lip:#EFF1EA; --ripple:rgba(23,30,39,.055);
+  --ink:#171E27; --muted:#5C6675; --line:#C3C7BB;
+  --panel:rgba(238,239,233,.86); --panel-edge:rgba(23,30,39,.10);
+  --brass:#7A5E22; --brass-lit:#96762F; --on-brass:#F5F4EF;
+  --stone:#8C9288; --stone-hi:#A3A89D; --stone-sh:rgba(23,30,39,.22);
+  --moss:rgba(78,107,80,.18);
+  --grain:.030;
+  --shadow:0 2px 6px rgba(23,30,39,.07), 0 16px 40px -20px rgba(23,30,39,.35);
+
+  --f-display:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",Georgia,serif;
+  --f-body:"Zen Kaku Gothic New",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:ui-monospace,SFMono-Regular,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --sand:#131A23; --sand-2:#0F151D;
+    --groove:#080C12; --lip:#313E4D; --ripple:rgba(231,227,216,.05);
+    --ink:#E7E3D8; --muted:#8A93A2; --line:#2A3441;
+    --panel:rgba(20,27,36,.84); --panel-edge:rgba(231,227,216,.13);
+    --brass:#C9A661; --brass-lit:#E0BE79; --on-brass:#10151C;
+    --stone:#0C1219; --stone-hi:#222D3A; --stone-sh:rgba(0,0,0,.6);
+    --moss:rgba(126,160,126,.14);
+    --grain:.055;
+    --shadow:0 2px 6px rgba(0,0,0,.45), 0 18px 46px -20px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="light"]{
+  --sand:#DEE0D8; --sand-2:#D4D7CD;
+  --groove:#ADB3A4; --lip:#EFF1EA; --ripple:rgba(23,30,39,.055);
+  --ink:#171E27; --muted:#5C6675; --line:#C3C7BB;
+  --panel:rgba(238,239,233,.86); --panel-edge:rgba(23,30,39,.10);
+  --brass:#7A5E22; --brass-lit:#96762F; --on-brass:#F5F4EF;
+  --stone:#8C9288; --stone-hi:#A3A89D; --stone-sh:rgba(23,30,39,.22);
+  --moss:rgba(78,107,80,.18);
+  --grain:.030;
+  --shadow:0 2px 6px rgba(23,30,39,.07), 0 16px 40px -20px rgba(23,30,39,.35);
+}
+:root[data-theme="dark"]{
+  --sand:#131A23; --sand-2:#0F151D;
+  --groove:#080C12; --lip:#313E4D; --ripple:rgba(231,227,216,.05);
+  --ink:#E7E3D8; --muted:#8A93A2; --line:#2A3441;
+  --panel:rgba(20,27,36,.84); --panel-edge:rgba(231,227,216,.13);
+  --brass:#C9A661; --brass-lit:#E0BE79; --on-brass:#10151C;
+  --stone:#0C1219; --stone-hi:#222D3A; --stone-sh:rgba(0,0,0,.6);
+  --moss:rgba(126,160,126,.14);
+  --grain:.055;
+  --shadow:0 2px 6px rgba(0,0,0,.45), 0 18px 46px -20px rgba(0,0,0,.8);
+}
+
+/* ══ Base ═════════════════════════════════════════════════════════════════ */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; overflow:hidden; background:var(--sand); color:var(--ink);
+  font-family:var(--f-body); font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior:none; -webkit-user-select:none; user-select:none;
+}
+:focus-visible{outline:2px solid var(--brass-lit);outline-offset:2px;border-radius:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+#garden{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+body[data-mode="stones"] #garden{cursor:pointer}
+
+.layer{position:fixed;inset:0;pointer-events:none;z-index:1;padding:clamp(.9rem,2.4vw,1.6rem)}
+.layer > *{pointer-events:auto}
+
+/* ── Crest ───────────────────────────────────────────────────────────────── */
+.crest{position:absolute;top:clamp(.9rem,2.4vw,1.6rem);left:clamp(.9rem,2.4vw,1.6rem);
+  display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap}
+.crest .mark{font-family:var(--f-display);font-size:clamp(1.3rem,3vw,1.7rem);letter-spacing:.12em;line-height:1}
+.crest .rom{font-family:var(--f-mono);font-size:.6rem;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+.crest .ver{font-family:var(--f-mono);font-size:.6rem;letter-spacing:.16em;color:var(--brass);
+  border:1px solid var(--line);border-radius:1px;padding:.1rem .34rem}
+
+/* ── Stats ───────────────────────────────────────────────────────────────── */
+.stats{position:absolute;top:clamp(.9rem,2.4vw,1.6rem);right:clamp(.9rem,2.4vw,1.6rem);
+  display:flex;gap:clamp(.9rem,2.4vw,1.7rem);text-align:right}
+.stat{display:flex;flex-direction:column;gap:.1rem}
+.stat .k{font-family:var(--f-mono);font-size:.575rem;letter-spacing:.17em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:var(--f-mono);font-size:.9rem;font-variant-numeric:tabular-nums;color:var(--ink)}
+@media (max-width:34rem){ .stats{display:none} }
+
+/* ── Console ─────────────────────────────────────────────────────────────── */
+/* The hint rides inside the console as a full-width first row, so it stays
+   glued to the controls it describes at every width. */
+.hint{
+  flex-basis:100%;margin:0 0 .1rem;
+  font-size:.8125rem;color:var(--muted);text-align:center;
+  transition:opacity .5s ease;
+}
+.console{
+  position:absolute;left:50%;bottom:clamp(.9rem,2.4vw,1.6rem);transform:translateX(-50%);
+  display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
+  gap:.4rem .55rem; padding:.5rem .6rem; max-width:min(96vw,60rem);
+  background:var(--panel); border:1px solid var(--panel-edge); border-radius:3px;
+  box-shadow:var(--shadow); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+}
+.grp{display:flex;align-items:center;gap:.3rem}
+.grp-k{
+  font-family:var(--f-mono);font-size:.55rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--muted);padding-right:.15rem;white-space:nowrap;
+}
+.sep{width:1px;align-self:stretch;background:var(--panel-edge);margin:.1rem .15rem}
+@media (max-width:52rem){ .sep{display:none} .console{gap:.35rem .45rem} }
+
+.seg{display:flex;border:1px solid var(--line);border-radius:2px;overflow:hidden}
+.seg button{
+  font-family:var(--f-body);font-size:.75rem;font-weight:500;letter-spacing:.01em;
+  padding:.36rem .62rem;border:0;background:none;color:var(--muted);cursor:pointer;
+  transition:background .18s,color .18s;
+}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--brass);color:var(--on-brass)}
+.seg button .k{font-family:var(--f-display);font-size:.85rem;margin-right:.28rem}
+
+.act{
+  font-family:var(--f-body);font-size:.75rem;font-weight:500;
+  padding:.4rem .7rem;border:1px solid var(--line);border-radius:2px;
+  background:none;color:var(--muted);cursor:pointer;white-space:nowrap;
+  transition:color .18s,border-color .18s;
+}
+.act:hover{color:var(--brass);border-color:var(--brass)}
+.act[aria-pressed="true"]{color:var(--brass);border-color:var(--brass)}
+.act:disabled{opacity:.42;cursor:default}
+.act:disabled:hover{color:var(--muted);border-color:var(--line)}
+
+.toast{
+  position:fixed;left:50%;bottom:clamp(5.5rem,14vh,7.5rem);transform:translate(-50%,60%);
+  background:var(--ink);color:var(--sand);border-radius:2px;padding:.5rem 1rem;
+  font-size:.8125rem;box-shadow:var(--shadow);z-index:9;pointer-events:none;
+  opacity:0;visibility:hidden;
+  transition:transform .28s ease,opacity .28s ease,visibility 0s linear .28s;
+}
+.toast.show{transform:translate(-50%,0);opacity:1;visibility:visible;transition-delay:0s}
+@media (prefers-reduced-motion:reduce){
+  .toast{transition:opacity .01s,visibility 0s}
+  .hint{transition:none}
+}
+</style>
+
+<canvas id="garden"></canvas>
+
+<div class="layer">
+  <div class="crest">
+    <span class="mark">名残</span>
+    <span class="rom">Ghosting Garden</span>
+    <span class="ver">V1</span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><span class="k">Strokes</span><span class="v" id="s-strokes">0</span></div>
+    <div class="stat"><span class="k">Stones</span><span class="v" id="s-stones">0</span></div>
+    <div class="stat"><span class="k">Sat for</span><span class="v" id="s-time">00:00</span></div>
+  </div>
+
+  <div class="console" role="toolbar" aria-label="Garden controls">
+    <p class="hint" id="hint">Drag anywhere to rake the sand.</p>
+
+    <div class="grp">
+      <span class="grp-k">Tool</span>
+      <div class="seg" id="mode">
+        <button type="button" data-mode="rake"   aria-pressed="true"><span class="k">砂</span>Rake</button>
+        <button type="button" data-mode="stones" aria-pressed="false"><span class="k">石</span>Stones</button>
+      </div>
+    </div>
+
+    <span class="sep"></span>
+
+    <div class="grp">
+      <span class="grp-k">Tines</span>
+      <div class="seg" id="tines">
+        <button type="button" data-tines="3" aria-pressed="false">3</button>
+        <button type="button" data-tines="5" aria-pressed="true">5</button>
+        <button type="button" data-tines="8" aria-pressed="false">8</button>
+      </div>
+    </div>
+
+    <span class="sep"></span>
+
+    <div class="grp">
+      <span class="grp-k">Ghost</span>
+      <div class="seg" id="ghost">
+        <button type="button" data-fade="25000"  aria-pressed="false">Quick</button>
+        <button type="button" data-fade="110000" aria-pressed="true">Slow</button>
+        <button type="button" data-fade="0"      aria-pressed="false">Never</button>
+      </div>
+    </div>
+
+    <span class="sep"></span>
+
+    <div class="grp">
+      <button class="act" id="smooth" type="button">Smooth</button>
+      <button class="act" id="reset" type="button">Reset</button>
+      <button class="act" id="sound" type="button" aria-pressed="false">Sound off</button>
+      <button class="act" id="save" type="button">Save image</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<p class="sr" id="live" aria-live="polite"></p>
+
+<script>
+(function () {
+  "use strict";
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  function $(id) { return document.getElementById(id); }
+
+  /* ── theme tokens, re-read whenever the theme flips ───────────────────── */
+  var T = {};
+  function readTokens() {
+    var cs = getComputedStyle(document.documentElement);
+    var g = function (n) { return cs.getPropertyValue(n).trim(); };
+    T = {
+      sand: g("--sand"), sand2: g("--sand-2"),
+      groove: g("--groove"), lip: g("--lip"), ripple: g("--ripple"),
+      stone: g("--stone"), stoneHi: g("--stone-hi"), stoneSh: g("--stone-sh"),
+      moss: g("--moss"), grain: parseFloat(g("--grain")) || 0.04
+    };
+  }
+
+  /* ── deterministic noise ──────────────────────────────────────────────── */
+  function mulberry(seed) {
+    return function () {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  var toastT = null;
+  function toast(msg) {
+    var el = $("toast");
+    el.textContent = msg; el.classList.add("show");
+    $("live").textContent = msg;
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { el.classList.remove("show"); }, 2400);
+  }
+
+  /* ══ canvases ═════════════════════════════════════════════════════════ */
+  var cv = $("garden"), ctx = cv.getContext("2d", { alpha: false });
+  var base = document.createElement("canvas"), bx = base.getContext("2d");
+  var grain = null;
+  var W = 0, H = 0, DPR = 1;
+
+  /* Ghosting runs on a ring of mark layers, rotated once per fadeMs/N. New
+     strokes land in the current layer; older ones are composited at a falling
+     globalAlpha and are empty by the time their slot comes round again, so a
+     mark's opacity is a float applied at draw time. Decaying one layer in
+     place with destination-out cannot work: the per-frame alpha step rounds
+     away in 8-bit and the marks stick forever. */
+  var N = 3, L = [], cur = 0, epochAt = 0;
+  function newLayer() {
+    var c = document.createElement("canvas");
+    return { c: c, x: c.getContext("2d"), ink: 0 };
+  }
+  for (var li = 0; li < N; li++) L.push(newLayer());
+
+  function layerInk() {
+    var n = 0; for (var i = 0; i < N; i++) n += L[i].ink; return n;
+  }
+  function clearLayer(l) {
+    l.x.setTransform(1, 0, 0, 1, 0, 0);
+    l.x.clearRect(0, 0, l.c.width, l.c.height);
+    l.x.setTransform(DPR, 0, 0, DPR, 0, 0);
+    l.ink = 0;
+  }
+  function clearMarks() { for (var i = 0; i < N; i++) clearLayer(L[i]); }
+
+  var stones = [];
+  var strokeCount = 0;
+  var fadeMs = 110000, tines = 5, mode = "rake";
+
+  function makeStone(x, y, r, seed) {
+    var rnd = mulberry(seed);
+    var lobes = [];
+    for (var i = 0; i < 9; i++) lobes.push(0.76 + rnd() * 0.42);
+    return { x: x, y: y, r: r, lobes: lobes, tilt: rnd() * Math.PI * 2, moss: rnd() > 0.45 };
+  }
+
+  function stonePath(c, o) {
+    var n = o.lobes.length, p = [], i, ang, rad;
+    for (i = 0; i < n; i++) {
+      ang = (i / n) * Math.PI * 2 + o.tilt;
+      rad = o.r * o.lobes[i];
+      p.push([o.x + Math.cos(ang) * rad, o.y + Math.sin(ang) * rad * 0.80]);
+    }
+    var mid = function (a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; };
+    var m0 = mid(p[n - 1], p[0]);
+    c.beginPath();
+    c.moveTo(m0[0], m0[1]);
+    for (i = 0; i < n; i++) {
+      var m = mid(p[i], p[(i + 1) % n]);
+      c.quadraticCurveTo(p[i][0], p[i][1], m[0], m[1]);
+    }
+    c.closePath();
+  }
+
+  /* ── base layer: flat sand, ambient ripples, grain ────────────────────── */
+  function buildGrain() {
+    var n = document.createElement("canvas");
+    n.width = n.height = 96;
+    var nc = n.getContext("2d"), img = nc.createImageData(96, 96), d = img.data;
+    var rnd = mulberry(31337);
+    for (var i = 0; i < d.length; i += 4) {
+      var v = (rnd() * 255) | 0;
+      d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 30;
+    }
+    nc.putImageData(img, 0, 0);
+    grain = ctx.createPattern(n, "repeat");
+  }
+
+  function buildBase() {
+    bx.setTransform(1, 0, 0, 1, 0, 0);
+    bx.clearRect(0, 0, base.width, base.height);
+    bx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    var g = bx.createLinearGradient(0, 0, W * 0.35, H);
+    g.addColorStop(0, T.sand); g.addColorStop(1, T.sand2);
+    bx.fillStyle = g; bx.fillRect(0, 0, W, H);
+
+    // ambient ripples so untouched sand is never a flat void
+    bx.strokeStyle = T.ripple; bx.lineWidth = 1;
+    var gap = 13, rnd = mulberry(9001);
+    for (var y0 = -gap; y0 < H + gap; y0 += gap) {
+      var a1 = 3 + rnd() * 5, a2 = 2 + rnd() * 4;
+      var p1 = rnd() * 6.28, p2 = rnd() * 6.28;
+      bx.beginPath();
+      for (var x = 0; x <= W + 8; x += 8) {
+        var y = y0 + Math.sin(x / 190 + p1) * a1 + Math.sin(x / 71 + p2) * a2;
+        if (x === 0) bx.moveTo(0, y); else bx.lineTo(x, y);
+      }
+      bx.stroke();
+    }
+
+    if (grain) {
+      bx.save(); bx.globalAlpha = T.grain; bx.fillStyle = grain;
+      bx.fillRect(0, 0, W, H); bx.restore();
+    }
+  }
+
+  /* ── clip marks so furrows stop at the stones ─────────────────────────── */
+  function clipAroundStones(c) {
+    c.beginPath();
+    c.rect(0, 0, W, H);
+    for (var i = 0; i < stones.length; i++) {
+      var o = stones[i], n = o.lobes.length, p = [], k, ang, rad;
+      for (k = 0; k < n; k++) {
+        ang = (k / n) * Math.PI * 2 + o.tilt;
+        rad = o.r * o.lobes[k] * 1.06;                 // a hair of clearance
+        p.push([o.x + Math.cos(ang) * rad, o.y + Math.sin(ang) * rad * 0.80]);
+      }
+      var mid = function (a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; };
+      var m0 = mid(p[n - 1], p[0]);
+      c.moveTo(m0[0], m0[1]);
+      for (k = 0; k < n; k++) {
+        var m = mid(p[k], p[(k + 1) % n]);
+        c.quadraticCurveTo(p[k][0], p[k][1], m[0], m[1]);
+      }
+      c.closePath();
+    }
+    c.clip("evenodd");
+  }
+
+  /* ── carve one rake segment: N tines, each a groove with a lit lip ────── */
+  function carve(ax, ay, bxp, byp) {
+    var dx = bxp - ax, dy = byp - ay;
+    var len = Math.hypot(dx, dy);
+    if (len < 1.1) return false;
+    var nx = -dy / len, ny = dx / len;
+    var spacing = 8.5, i, off, x1, y1, x2, y2;
+    var mx = L[cur].x;
+
+    mx.save();
+    clipAroundStones(mx);
+    mx.lineCap = "round"; mx.lineJoin = "round";
+
+    for (i = 0; i < tines; i++) {
+      off = (i - (tines - 1) / 2) * spacing;
+      x1 = ax + nx * off; y1 = ay + ny * off;
+      x2 = bxp + nx * off; y2 = byp + ny * off;
+      mx.strokeStyle = T.groove; mx.lineWidth = 3.1;
+      mx.beginPath(); mx.moveTo(x1, y1); mx.lineTo(x2, y2); mx.stroke();
+    }
+    for (i = 0; i < tines; i++) {                       // lit lips, drawn after
+      off = (i - (tines - 1) / 2) * spacing;
+      x1 = ax + nx * off - 1.0; y1 = ay + ny * off - 1.3;
+      x2 = bxp + nx * off - 1.0; y2 = byp + ny * off - 1.3;
+      mx.strokeStyle = T.lip; mx.lineWidth = 1.15;
+      mx.beginPath(); mx.moveTo(x1, y1); mx.lineTo(x2, y2); mx.stroke();
+    }
+    mx.restore();
+    L[cur].ink++;
+    return true;
+  }
+
+  /* ── compose ──────────────────────────────────────────────────────────── */
+  function drawStone(o) {
+    stonePath(ctx, o);
+    var g = ctx.createLinearGradient(o.x - o.r, o.y - o.r, o.x + o.r * 0.6, o.y + o.r);
+    g.addColorStop(0, T.stoneHi); g.addColorStop(1, T.stone);
+    ctx.save();
+    ctx.shadowColor = T.stoneSh; ctx.shadowBlur = o.r * 0.85; ctx.shadowOffsetY = o.r * 0.18;
+    ctx.fillStyle = g; ctx.fill();
+    ctx.restore();
+    if (o.moss) {
+      ctx.save(); ctx.clip();
+      ctx.fillStyle = T.moss;
+      ctx.beginPath();
+      ctx.ellipse(o.x - o.r * 0.24, o.y + o.r * 0.50, o.r * 0.54, o.r * 0.24, -0.26, 0, Math.PI * 2);
+      ctx.fill(); ctx.restore();
+    }
+  }
+
+  // rank 0 is the layer being drawn into; rank N-1 is the one about to expire.
+  function rankAlpha(rank, p) {
+    if (fadeMs <= 0 || rank === 0) return 1;
+    return Math.max(0, Math.min(1, 1 - (rank - 1 + p) / (N - 1)));
+  }
+
+  function compose() {
+    var p = fadeMs > 0 ? Math.min(1, (performance.now() - epochAt) / (fadeMs / N)) : 0;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(base, 0, 0);
+    for (var rank = N - 1; rank >= 0; rank--) {        // oldest first
+      var l = L[(cur - rank + N) % N];
+      if (!l.ink) continue;
+      var a = rankAlpha(rank, p);
+      if (a <= 0.002) continue;
+      ctx.globalAlpha = a;
+      ctx.drawImage(l.c, 0, 0);
+    }
+    ctx.globalAlpha = 1;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    for (var i = 0; i < stones.length; i++) drawStone(stones[i]);
+  }
+
+  /* ── the ghosting loop: older layers dim, then their slots are recycled ── */
+  var raf = null;
+  function loop() {
+    if (fadeMs > 0 && performance.now() - epochAt >= fadeMs / N) {
+      cur = (cur + 1) % N;         // the oldest slot is spent — reuse it
+      clearLayer(L[cur]);
+      epochAt = performance.now();
+    }
+    compose();
+    if (fadeMs > 0 && layerInk() > 0) raf = requestAnimationFrame(loop);
+    else raf = null;
+  }
+  function wake() {
+    if (raf === null && fadeMs > 0 && layerInk() > 0) raf = requestAnimationFrame(loop);
+    else if (raf === null) compose();
+  }
+
+  /* ══ layout ═══════════════════════════════════════════════════════════ */
+  function layout(keepMarks) {
+    var kept = null;
+    if (keepMarks && L[0].c.width) {
+      kept = L.map(function (l) {
+        if (!l.ink) return null;
+        var c = document.createElement("canvas");
+        c.width = l.c.width; c.height = l.c.height;
+        c.getContext("2d").drawImage(l.c, 0, 0);
+        return c;
+      });
+    }
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    var oldW = W, oldH = H;
+    W = Math.max(1, window.innerWidth); H = Math.max(1, window.innerHeight);
+    if (keepMarks && oldW && oldH) {                    // keep stones in the frame
+      var sx = W / oldW, sy = H / oldH, s = Math.min(sx, sy);
+      for (var i = 0; i < stones.length; i++) {
+        stones[i].x *= sx; stones[i].y *= sy; stones[i].r *= s;
+      }
+    }
+    [cv, base].concat(L.map(function (l) { return l.c; })).forEach(function (c) {
+      c.width = Math.round(W * DPR); c.height = Math.round(H * DPR);
+    });
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    L.forEach(function (l, i) {
+      l.x.setTransform(1, 0, 0, 1, 0, 0);
+      if (kept && kept[i]) l.x.drawImage(kept[i], 0, 0, l.c.width, l.c.height);
+      else l.ink = 0;
+      l.x.setTransform(DPR, 0, 0, DPR, 0, 0);
+    });
+    buildGrain(); buildBase();
+    compose();
+  }
+
+  /* ══ input ════════════════════════════════════════════════════════════ */
+  var last = null, dragging = null, moved = false, downAt = 0, strokeLive = false;
+
+  function pos(e) {
+    var r = cv.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function hitStone(p) {
+    for (var i = stones.length - 1; i >= 0; i--) {
+      var o = stones[i];
+      var dx = (p.x - o.x) / o.r, dy = (p.y - o.y) / (o.r * 0.82);
+      if (dx * dx + dy * dy <= 1.15) return o;
+    }
+    return null;
+  }
+  function refreshStats() {
+    $("s-strokes").textContent = strokeCount;
+    $("s-stones").textContent = stones.length;
+  }
+
+  cv.addEventListener("pointerdown", function (e) {
+    cv.setPointerCapture(e.pointerId);
+    var p = pos(e);
+    last = p; moved = false; downAt = performance.now();
+    if (mode === "stones") {
+      dragging = hitStone(p);
+      if (dragging) { dragging.grab = { dx: p.x - dragging.x, dy: p.y - dragging.y }; }
+    } else {
+      strokeLive = true; audio.rakeOn();
+    }
+  });
+
+  cv.addEventListener("pointermove", function (e) {
+    var p = pos(e);
+    if (!last) { last = p; return; }
+    var dist = Math.hypot(p.x - last.x, p.y - last.y);
+    if (dist > 3) moved = true;
+
+    if (mode === "stones") {
+      if (dragging) {
+        dragging.x = p.x - dragging.grab.dx;
+        dragging.y = p.y - dragging.grab.dy;
+        compose();
+      }
+    } else if (strokeLive) {
+      if (carve(last.x, last.y, p.x, p.y)) {
+        audio.rakeSpeed(dist);
+        wake();
+      }
+    }
+    last = p;
+  });
+
+  function endPointer(e) {
+    var p = last;
+    if (mode === "stones" && p) {
+      if (!dragging && !moved) {                       // tap empty sand: place
+        var r = Math.max(22, Math.min(W, H) * (0.045 + Math.random() * 0.035));
+        stones.push(makeStone(p.x, p.y, r, (Math.random() * 1e9) | 0));
+        audio.thud(); refreshStats(); compose();
+        setHint("Drag a stone to move it. Double-tap a stone to take it out.");
+      } else if (dragging) {
+        delete dragging.grab;
+      }
+    } else if (strokeLive && moved) {
+      strokeCount++; refreshStats(); saveLifetime();
+    }
+    strokeLive = false; dragging = null; last = null;
+    audio.rakeOff();
+  }
+  cv.addEventListener("pointerup", endPointer);
+  cv.addEventListener("pointercancel", endPointer);
+
+  cv.addEventListener("dblclick", function (e) {
+    if (mode !== "stones") return;
+    var o = hitStone(pos(e));
+    if (!o) return;
+    stones.splice(stones.indexOf(o), 1);
+    audio.thud(0.6); refreshStats(); compose();
+  });
+
+  /* ══ controls ═════════════════════════════════════════════════════════ */
+  function press(groupId, matchAttr, value) {
+    var btns = $(groupId).querySelectorAll("button");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].setAttribute("aria-pressed", String(btns[i].dataset[matchAttr] === String(value)));
+    }
+  }
+  var hintT = null;
+  function setHint(text) {
+    var h = $("hint");
+    h.textContent = text; h.style.opacity = "1";
+    clearTimeout(hintT);
+    hintT = setTimeout(function () { h.style.opacity = ".45"; }, 5200);
+  }
+
+  $("mode").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-mode]"); if (!b) return;
+    mode = b.dataset.mode;
+    document.body.dataset.mode = mode;
+    press("mode", "mode", mode);
+    setHint(mode === "rake"
+      ? "Drag anywhere to rake the sand."
+      : "Tap the sand to set a stone. Drag to move one, double-tap to take it out.");
+  });
+
+  $("tines").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-tines]"); if (!b) return;
+    tines = parseInt(b.dataset.tines, 10);
+    press("tines", "tines", tines);
+  });
+
+  $("ghost").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-fade]"); if (!b) return;
+    fadeMs = parseInt(b.dataset.fade, 10);
+    press("ghost", "fade", fadeMs);
+    epochAt = performance.now();
+    if (fadeMs === 0) { if (raf !== null) { cancelAnimationFrame(raf); raf = null; } compose(); }
+    else wake();
+    setHint(fadeMs === 0
+      ? "The sand keeps every line now. Nothing fades."
+      : "Lines will fade in about " + Math.round(fadeMs / 1000) + " seconds.");
+  });
+
+  function stopAndClear() {
+    clearMarks();
+    if (raf !== null) { cancelAnimationFrame(raf); raf = null; }
+    epochAt = performance.now();
+  }
+  $("smooth").addEventListener("click", function () {
+    stopAndClear(); compose(); toast("The sand is smooth again.");
+  });
+  $("reset").addEventListener("click", function () {
+    stopAndClear(); seedStones(); refreshStats(); compose(); toast("Garden reset.");
+  });
+
+  /* ══ sound: rake hiss from filtered noise, stone set as a low thud ═════ */
+  var audio = (function () {
+    var on = false, ac = null, noise = null, band = null, gain = null, target = 0, tick = null;
+
+    function ensure() {
+      if (ac) { if (ac.state === "suspended") ac.resume(); return true; }
+      try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (err) { return false; }
+      var len = Math.floor(ac.sampleRate * 2), buf = ac.createBuffer(1, len, ac.sampleRate);
+      var d = buf.getChannelData(0), rnd = mulberry(4242);
+      for (var i = 0; i < len; i++) d[i] = rnd() * 2 - 1;
+      noise = ac.createBufferSource(); noise.buffer = buf; noise.loop = true;
+      band = ac.createBiquadFilter(); band.type = "bandpass";
+      band.frequency.value = 1500; band.Q.value = 0.7;
+      gain = ac.createGain(); gain.gain.value = 0;
+      noise.connect(band); band.connect(gain); gain.connect(ac.destination);
+      noise.start();
+      return true;
+    }
+
+    return {
+      toggle: function () {
+        on = !on;
+        if (on && !ensure()) { on = false; return false; }
+        if (!on && gain) gain.gain.setTargetAtTime(0, ac.currentTime, 0.05);
+        return on;
+      },
+      rakeOn: function () { if (on && ensure()) target = 0; },
+      rakeSpeed: function (dist) {
+        if (!on || !ac) return;
+        target = Math.min(0.16, 0.012 + dist * 0.0045);
+        band.frequency.setTargetAtTime(900 + Math.min(dist, 40) * 34, ac.currentTime, 0.06);
+        gain.gain.setTargetAtTime(target, ac.currentTime, 0.03);
+        clearTimeout(tick);
+        tick = setTimeout(function () {                 // hiss dies if the hand stops
+          if (on && ac) gain.gain.setTargetAtTime(0, ac.currentTime, 0.06);
+        }, 90);
+      },
+      rakeOff: function () {
+        clearTimeout(tick);
+        if (on && ac) gain.gain.setTargetAtTime(0, ac.currentTime, 0.05);
+      },
+      thud: function (scale) {
+        if (!on || !ensure()) return;
+        var t = ac.currentTime, s = scale || 1;
+        var o = ac.createOscillator(), g = ac.createGain();
+        o.type = "sine";
+        o.frequency.setValueAtTime(150 * s, t);
+        o.frequency.exponentialRampToValueAtTime(52 * s, t + 0.16);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.22 * s, t + 0.006);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+        o.connect(g); g.connect(ac.destination);
+        o.start(t); o.stop(t + 0.4);
+      }
+    };
+  })();
+
+  $("sound").addEventListener("click", function () {
+    var on = audio.toggle();
+    this.setAttribute("aria-pressed", String(on));
+    this.textContent = on ? "Sound on" : "Sound off";
+    if (on) audio.thud(0.9);
+  });
+
+  /* ══ save ═════════════════════════════════════════════════════════════ */
+  $("save").addEventListener("click", function () {
+    var btn = this;
+    btn.disabled = true;
+    cv.toBlob(function (blob) {
+      if (!blob) { btn.disabled = false; toast("The image could not be made."); return; }
+      var name = "ghosting-garden.png";
+      var done = function (msg) { btn.disabled = false; toast(msg); };
+
+      if (window.claude && window.claude.downloads) {
+        window.claude.downloads.save({ filename: name, data: blob }).then(
+          function () { done("Garden saved."); },
+          function (err) {
+            var code = err && err.code;
+            if (code === "declined") done("Save cancelled.");
+            else if (code === "rate_limited") done("A save is already open — try again in a moment.");
+            else done("Saving is not available here.");
+          }
+        );
+        return;
+      }
+      try {                                             // plain page / local file
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url; a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        done("Garden saved.");
+      } catch (err) { done("Saving is not available here."); }
+    }, "image/png");
+  });
+
+  /* ══ lifetime counter (this browser only) ═════════════════════════════ */
+  var store = (function () {
+    try { localStorage.setItem("__gg", "1"); localStorage.removeItem("__gg"); return localStorage; }
+    catch (err) { return null; }
+  })();
+  var lifetime = 0;
+  if (store) { lifetime = parseInt(store.getItem("gg.strokes") || "0", 10) || 0; }
+  function saveLifetime() {
+    if (store) { try { store.setItem("gg.strokes", String(lifetime + strokeCount)); } catch (err) {} }
+  }
+
+  var started = Date.now();
+  setInterval(function () {
+    var t = Math.floor((Date.now() - started) / 1000);
+    var m = Math.floor(t / 60), s = t % 60;
+    $("s-time").textContent = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }, 1000);
+
+  /* ══ opening arrangement ══════════════════════════════════════════════ */
+  function seedStones() {
+    var u = Math.sqrt(W * H);
+    stones = [
+      makeStone(W * 0.24, H * 0.44, u * 0.075, 11),
+      makeStone(W * 0.32, H * 0.56, u * 0.042, 22),
+      makeStone(W * 0.175, H * 0.60, u * 0.029, 33),
+      makeStone(W * 0.74, H * 0.62, u * 0.066, 44),
+      makeStone(W * 0.815, H * 0.70, u * 0.034, 55)
+    ];
+  }
+
+  // one self-drawing stroke on load, so the gesture is obvious without a label
+  function demoStroke() {
+    if (reduce.matches) return;
+    var pts = [], i, t;
+    for (i = 0; i <= 70; i++) {
+      t = i / 70;
+      pts.push({
+        x: W * (0.10 + t * 0.80),
+        y: H * 0.30 + Math.sin(t * Math.PI * 1.7) * H * 0.10
+      });
+    }
+    var k = 1;
+    (function step() {
+      if (k >= pts.length) { strokeCount++; refreshStats(); wake(); return; }
+      carve(pts[k - 1].x, pts[k - 1].y, pts[k].x, pts[k].y);
+      compose();
+      k += 2;
+      requestAnimationFrame(step);
+    })();
+  }
+
+  /* ══ theme + resize ═══════════════════════════════════════════════════ */
+  function onTheme() { readTokens(); buildBase(); compose(); }
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    (mq.addEventListener ? mq.addEventListener.bind(mq, "change") : mq.addListener.bind(mq))(onTheme);
+  }
+  new MutationObserver(onTheme).observe(document.documentElement,
+    { attributes: true, attributeFilter: ["data-theme"] });
+
+  var rz = null;
+  window.addEventListener("resize", function () {
+    clearTimeout(rz);
+    rz = setTimeout(function () { layout(true); }, 150);
+  });
+  window.addEventListener("pagehide", saveLifetime);
+  document.addEventListener("visibilitychange", function () { if (document.hidden) saveLifetime(); });
+
+  /* ══ go ═══════════════════════════════════════════════════════════════ */
+  document.body.dataset.mode = "rake";
+  readTokens();
+  layout(false);
+  seedStones();
+  refreshStats();
+  compose();
+  demoStroke();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { compose(); });
+})();
+</script>
