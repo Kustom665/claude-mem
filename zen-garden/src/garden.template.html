@@ -1,0 +1,970 @@
+<title>枯山水 — The Dry Garden</title>
+<style>
+/* ── Shippori Mincho (SIL OFL 1.1) — display, Latin + subset kanji ───────── */
+@font-face{font-family:"Shippori Mincho";font-style:normal;font-weight:400;font-display:swap;
+  src:url(data:font/woff2;base64,__SM400__) format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:"Shippori Mincho";font-style:normal;font-weight:600;font-display:swap;
+  src:url(data:font/woff2;base64,__SM600__) format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:"Shippori Mincho";font-style:normal;font-weight:400;font-display:swap;
+  src:url(data:font/woff2;base64,__SMJP__) format("woff2");
+  unicode-range:U+2E80-2FDF,U+3000-303F,U+3040-30FF,U+4E00-9FFF,U+FF00-FFEF;}
+@font-face{font-family:"Shippori Mincho";font-style:normal;font-weight:600;font-display:swap;
+  src:url(data:font/woff2;base64,__SMJP__) format("woff2");
+  unicode-range:U+2E80-2FDF,U+3000-303F,U+3040-30FF,U+4E00-9FFF,U+FF00-FFEF;}
+
+/* ── Zen Kaku Gothic New (SIL OFL 1.1) — body ───────────────────────────── */
+@font-face{font-family:"Zen Kaku Gothic New";font-style:normal;font-weight:400;font-display:swap;
+  src:url(data:font/woff2;base64,__ZK400__) format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:"Zen Kaku Gothic New";font-style:normal;font-weight:500;font-display:swap;
+  src:url(data:font/woff2;base64,__ZK500__) format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+
+/* ══ Tokens ═══════════════════════════════════════════════════════════════ */
+:root{
+  --ground:#E3E5DE; --ground-2:#EDEEE8; --ground-3:#D8DAD1;
+  --ink:#171E27; --muted:#5C6675; --line:#C6C9BF;
+  --brass:#7A5E22; --brass-lit:#96762F; --moss:#4E6B50;
+  --sand-bg:#DEE0D8; --sand-line:rgba(23,30,39,.17); --sand-line-soft:rgba(23,30,39,.09);
+  --stone:#8C9288; --stone-hi:#A2A79C; --stone-sh:rgba(23,30,39,.20);
+  --grain:.030;
+  --shadow:0 1px 2px rgba(23,30,39,.05), 0 10px 30px -14px rgba(23,30,39,.28);
+  --scrim-0:rgba(227,229,222,0); --scrim-1:rgba(227,229,222,.58); --scrim-2:rgba(227,229,222,1);
+  --scrim-v:rgba(227,229,222,.60); --brass-hair:rgba(122,94,34,.5);
+
+  --f-display:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",Georgia,serif;
+  --f-body:"Zen Kaku Gothic New",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:ui-monospace,SFMono-Regular,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  /* Zodiac signs default to emoji presentation; this stack has text glyphs and no emoji font. */
+  --f-symbol:"Segoe UI Symbol","Apple Symbols","Noto Sans Symbols 2","Noto Sans Symbols2","DejaVu Sans",serif;
+
+  --col:62ch;
+  --s1:.5rem; --s2:.875rem; --s3:1.375rem; --s4:2.25rem; --s5:3.5rem; --s6:5.5rem; --s7:8rem;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --ground:#0F151D; --ground-2:#161E28; --ground-3:#1C2531;
+    --ink:#E7E3D8; --muted:#8A93A2; --line:#26303C;
+    --brass:#C9A661; --brass-lit:#E0BE79; --moss:#7FA07E;
+    --sand-bg:#131A23; --sand-line:rgba(231,227,216,.145); --sand-line-soft:rgba(231,227,216,.06);
+    --stone:#0C1219; --stone-hi:#222D3A; --stone-sh:rgba(0,0,0,.55);
+    --grain:.055;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 16px 40px -18px rgba(0,0,0,.75);
+    --scrim-0:rgba(15,21,29,0); --scrim-1:rgba(15,21,29,.58); --scrim-2:rgba(15,21,29,1);
+    --scrim-v:rgba(15,21,29,.66); --brass-hair:rgba(201,166,97,.55);
+  }
+}
+:root[data-theme="light"]{
+  --ground:#E3E5DE; --ground-2:#EDEEE8; --ground-3:#D8DAD1;
+  --ink:#171E27; --muted:#5C6675; --line:#C6C9BF;
+  --brass:#7A5E22; --brass-lit:#96762F; --moss:#4E6B50;
+  --sand-bg:#DEE0D8; --sand-line:rgba(23,30,39,.17); --sand-line-soft:rgba(23,30,39,.09);
+  --stone:#8C9288; --stone-hi:#A2A79C; --stone-sh:rgba(23,30,39,.20);
+  --grain:.030;
+  --shadow:0 1px 2px rgba(23,30,39,.05), 0 10px 30px -14px rgba(23,30,39,.28);
+  --scrim-0:rgba(227,229,222,0); --scrim-1:rgba(227,229,222,.58); --scrim-2:rgba(227,229,222,1);
+  --scrim-v:rgba(227,229,222,.60); --brass-hair:rgba(122,94,34,.5);
+}
+:root[data-theme="dark"]{
+  --ground:#0F151D; --ground-2:#161E28; --ground-3:#1C2531;
+  --ink:#E7E3D8; --muted:#8A93A2; --line:#26303C;
+  --brass:#C9A661; --brass-lit:#E0BE79; --moss:#7FA07E;
+  --sand-bg:#131A23; --sand-line:rgba(231,227,216,.145); --sand-line-soft:rgba(231,227,216,.06);
+  --stone:#0C1219; --stone-hi:#222D3A; --stone-sh:rgba(0,0,0,.55);
+  --grain:.055;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 16px 40px -18px rgba(0,0,0,.75);
+  --scrim-0:rgba(15,21,29,0); --scrim-1:rgba(15,21,29,.58); --scrim-2:rgba(15,21,29,1);
+  --scrim-v:rgba(15,21,29,.66); --brass-hair:rgba(201,166,97,.55);
+}
+
+/* ══ Base ═════════════════════════════════════════════════════════════════ */
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:clamp(1rem,.96rem + .18vw,1.0625rem);
+  line-height:1.72; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;text-wrap:balance;margin:0;line-height:1.18}
+p{margin:0}
+a{color:var(--brass);text-decoration-thickness:1px;text-underline-offset:.22em}
+:focus-visible{outline:2px solid var(--brass-lit);outline-offset:3px;border-radius:2px}
+::selection{background:var(--brass);color:var(--ground)}
+
+.kanji{font-family:var(--f-display);font-weight:400}
+.label{
+  font-family:var(--f-mono);font-size:.6875rem;letter-spacing:.19em;text-transform:uppercase;
+  color:var(--muted);font-variant-numeric:tabular-nums;
+}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+
+/* ══ Hero: the garden ═════════════════════════════════════════════════════ */
+.garden{
+  position:relative; height:100vh; height:100svh; min-height:34rem;
+  overflow:hidden; background:var(--sand-bg);
+}
+#sand{
+  position:absolute; inset:0; width:100%; height:100%; display:block;
+  touch-action:pan-y; cursor:crosshair;
+}
+.garden::after{ /* vignette + reading scrim: above the canvas, below the UI */
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(122% 86% at 50% 40%, var(--scrim-0) 38%, var(--scrim-v) 100%),
+    linear-gradient(to bottom, var(--scrim-1) 0%, var(--scrim-0) 27%, var(--scrim-0) 55%, var(--scrim-2) 99%);
+}
+.garden-ui{
+  position:absolute; inset:0; z-index:1; pointer-events:none;
+  display:flex; flex-direction:column; justify-content:space-between;
+  padding:clamp(1.25rem,3.4vw,3rem);
+}
+.garden-ui > *{pointer-events:auto}
+
+.crest{display:flex;align-items:baseline;gap:.85rem;flex-wrap:wrap}
+.crest .mark{font-family:var(--f-display);font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:.14em;line-height:1}
+.crest .rom{font-family:var(--f-mono);font-size:.625rem;letter-spacing:.34em;text-transform:uppercase;color:var(--muted)}
+
+.hero-copy{max-width:38ch;display:flex;flex-direction:column;gap:var(--s3);padding-bottom:.5rem}
+.hero-copy h1{
+  font-size:clamp(2.4rem,7.6vw,4.4rem); letter-spacing:-.012em; line-height:1.04;
+}
+.hero-copy h1 em{font-style:italic;color:var(--brass)}
+.hero-note{color:var(--muted);font-size:.9375rem;line-height:1.6;max-width:34ch}
+
+.instruments{
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:clamp(1.25rem,3vw,2.75rem);
+  border-top:1px solid var(--line); padding-top:1.1rem;
+}
+.inst{display:flex;flex-direction:column;gap:.3rem;min-width:0}
+.inst .v{font-family:var(--f-mono);font-size:.9375rem;font-variant-numeric:tabular-nums;letter-spacing:.01em;color:var(--ink)}
+.inst .v b{font-weight:400;color:var(--brass)}
+.inst--moon{flex-direction:row;align-items:center;gap:.7rem}
+.moon-svg{flex:none;display:block}
+.rake-reset{
+  margin-left:auto; align-self:flex-end;
+  font-family:var(--f-mono);font-size:.6875rem;letter-spacing:.16em;text-transform:uppercase;
+  background:none;border:1px solid var(--line);color:var(--muted);
+  padding:.5rem .9rem;border-radius:1px;cursor:pointer;
+  transition:color .25s,border-color .25s;
+}
+.rake-reset:hover{color:var(--brass);border-color:var(--brass)}
+
+/* ══ Page body: the veranda ═══════════════════════════════════════════════ */
+main{
+  --rail:5.5rem;
+  max-width:calc(var(--col) + var(--rail) + 4rem);
+  margin-inline:auto; padding:var(--s7) clamp(1.25rem,4.5vw,2rem) var(--s6);
+  display:flex; flex-direction:column; gap:var(--s7);
+}
+.plot{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);gap:0 2rem;align-items:start}
+.plot-rail{position:sticky;top:2.5rem;display:flex;flex-direction:column;gap:.65rem;align-items:flex-start}
+.plot-rail .glyph{
+  font-family:var(--f-display);font-size:clamp(2.25rem,5vw,3rem);line-height:.92;
+  color:var(--ink);opacity:.26;letter-spacing:.06em;
+}
+.plot-body{display:flex;flex-direction:column;gap:var(--s4);min-width:0}
+.plot-head{display:flex;flex-direction:column;gap:var(--s2)}
+.plot-head h2{font-size:clamp(1.75rem,4vw,2.5rem);letter-spacing:-.008em}
+.plot-head p{color:var(--muted);max-width:56ch}
+@media (max-width:38rem){
+  main{--rail:0rem}
+  .plot{grid-template-columns:1fr;gap:var(--s3)}
+  .plot-rail{position:static;flex-direction:row;align-items:baseline;gap:.85rem}
+  .plot-rail .glyph{font-size:1.9rem}
+}
+
+/* ── Slab: the raised stone panel ─────────────────────────────────────────── */
+.slab{
+  background:var(--ground-2); border:1px solid var(--line);
+  border-radius:2px; box-shadow:var(--shadow); position:relative;
+}
+.slab::before{ /* lantern light falling on the top edge */
+  content:"";position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,var(--scrim-0),var(--brass-hair) 22%,var(--brass-hair) 78%,var(--scrim-0));
+}
+
+/* ══ Mantra ═══════════════════════════════════════════════════════════════ */
+.mantra{padding:clamp(1.75rem,4.5vw,2.75rem);display:flex;flex-direction:column;gap:var(--s3)}
+.mantra-body{min-height:8.5rem;display:flex;flex-direction:column;justify-content:center;gap:.5rem}
+.mantra-line{
+  font-family:var(--f-display); font-size:clamp(1.375rem,3.4vw,1.875rem);
+  line-height:1.42; letter-spacing:-.004em; text-wrap:balance; margin:0;
+}
+.mantra-line + .mantra-line{color:var(--brass)}
+.mantra-body.turning .mantra-line{opacity:0}
+.mantra-line{transition:opacity .42s ease}
+@media (prefers-reduced-motion:reduce){.mantra-line{transition:none}}
+.mantra-meta{
+  display:flex;align-items:center;gap:.6rem;
+  padding-top:var(--s2);border-top:1px solid var(--line);
+}
+.mantra-controls{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
+
+.btn{
+  font-family:var(--f-body);font-weight:500;font-size:.875rem;letter-spacing:.02em;
+  padding:.7rem 1.35rem;border-radius:1px;cursor:pointer;
+  border:1px solid var(--brass); background:var(--brass); color:var(--ground);
+  transition:background .22s,border-color .22s,color .22s;
+}
+.btn:hover{background:var(--brass-lit);border-color:var(--brass-lit)}
+.btn-quiet{
+  background:none;color:var(--muted);border-color:var(--line);
+  font-family:var(--f-mono);font-size:.6875rem;letter-spacing:.16em;text-transform:uppercase;
+  padding:.68rem 1rem;
+}
+.btn-quiet:hover{background:none;color:var(--brass);border-color:var(--brass)}
+.btn-quiet[aria-pressed="true"]{color:var(--brass);border-color:var(--brass)}
+
+/* ══ Zodiac ═══════════════════════════════════════════════════════════════ */
+.signs{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(7.5rem,1fr));
+  gap:.5rem;list-style:none;margin:0;padding:0;
+}
+.sign-btn{
+  width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:.2rem;
+  padding:.8rem .85rem .75rem; text-align:left; cursor:pointer;
+  background:var(--ground-2);border:1px solid var(--line);border-radius:2px;color:var(--ink);
+  font-family:var(--f-body); transition:border-color .2s,background .2s,transform .2s;
+}
+.sign-btn .g{
+  font-family:var(--f-symbol);font-variant-emoji:text;
+  font-size:1.3rem;line-height:1.15;color:var(--muted);transition:color .2s;
+}
+.sign-btn .n{font-size:.9375rem;font-weight:500;letter-spacing:.005em}
+.sign-btn .d{font-family:var(--f-mono);font-size:.625rem;letter-spacing:.09em;color:var(--muted);font-variant-numeric:tabular-nums}
+.sign-btn:hover{border-color:var(--brass)}
+.sign-btn:hover .g{color:var(--brass)}
+.sign-btn[aria-pressed="true"]{
+  border-color:var(--brass);background:var(--ground-3);transform:translateY(-2px);
+}
+.sign-btn[aria-pressed="true"] .g{color:var(--brass)}
+@media (prefers-reduced-motion:reduce){.sign-btn{transition:border-color .2s,background .2s}.sign-btn[aria-pressed="true"]{transform:none}}
+
+.reading{padding:clamp(1.6rem,4vw,2.5rem);display:flex;flex-direction:column;gap:var(--s3)}
+.reading[hidden]{display:none}
+.reading-top{display:flex;align-items:flex-start;gap:1.1rem;flex-wrap:wrap}
+.reading-glyph{
+  font-family:var(--f-symbol);font-variant-emoji:text;
+  font-size:2.75rem;line-height:1.1;color:var(--brass);flex:none;
+}
+.reading-id{display:flex;flex-direction:column;gap:.15rem}
+.reading-id h3{font-size:clamp(1.5rem,3.4vw,2rem)}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-left:auto}
+.chip{
+  display:inline-flex;align-items:center;gap:.4rem;
+  font-family:var(--f-mono);font-size:.625rem;letter-spacing:.16em;text-transform:uppercase;
+  border:1px solid var(--line);border-radius:1px;padding:.34rem .6rem;color:var(--muted);white-space:nowrap;
+}
+.chip .k{font-family:var(--f-display);font-size:.9rem;letter-spacing:0;text-transform:none;color:var(--moss)}
+.reading-essence{
+  font-family:var(--f-display);font-size:clamp(1.1875rem,2.6vw,1.4375rem);line-height:1.5;
+  color:var(--ink);text-wrap:balance;
+}
+.reading-text{color:var(--muted);max-width:60ch}
+.reading-rows{display:flex;flex-direction:column;gap:var(--s2);border-top:1px solid var(--line);padding-top:var(--s3)}
+.rrow{display:grid;grid-template-columns:6.5rem minmax(0,1fr);gap:.4rem 1.1rem;align-items:baseline}
+.rrow .label{padding-top:.18rem}
+.rrow p{max-width:52ch}
+@media (max-width:30rem){.rrow{grid-template-columns:1fr;gap:.15rem}}
+
+/* ══ Plaque: the counter ══════════════════════════════════════════════════ */
+.plaque{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(8.5rem,1fr));
+  gap:1px;background:var(--line);border:1px solid var(--line);border-radius:2px;overflow:hidden;
+}
+.plaque .cell{background:var(--ground-2);padding:1.1rem 1.15rem;display:flex;flex-direction:column;gap:.32rem}
+.plaque .cell .v{
+  font-family:var(--f-mono);font-size:1.375rem;font-variant-numeric:tabular-nums;
+  letter-spacing:-.01em;color:var(--brass);line-height:1.1;
+}
+.plaque .cell .v small{font-size:.8125rem;color:var(--muted);letter-spacing:.06em}
+
+/* ══ Close ════════════════════════════════════════════════════════════════ */
+.close{
+  border-top:1px solid var(--line);padding-top:var(--s4);
+  display:flex;flex-direction:column;gap:var(--s2);
+}
+.close p{color:var(--muted);font-size:.9375rem;max-width:56ch}
+.close .sig{font-family:var(--f-display);font-size:1.125rem;color:var(--ink)}
+.fineprint{font-size:.8125rem;color:var(--muted);opacity:.85;max-width:60ch}
+.toast{
+  position:fixed;left:50%;bottom:1.75rem;transform:translate(-50%,180%);
+  background:var(--ink);color:var(--ground);border-radius:2px;
+  padding:.6rem 1.1rem;font-size:.8125rem;letter-spacing:.02em;
+  box-shadow:var(--shadow);z-index:20;pointer-events:none;
+  opacity:0;visibility:hidden;
+  transition:transform .3s ease, opacity .3s ease, visibility 0s linear .3s;
+}
+.toast.show{transform:translate(-50%,0);opacity:1;visibility:visible;transition-delay:0s}
+@media (prefers-reduced-motion:reduce){.toast{transition:opacity .01s, visibility 0s}}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+</style>
+
+<header class="garden">
+  <canvas id="sand" aria-label="A field of raked gravel with stones. Drag across it to rake the sand." role="img"></canvas>
+  <div class="garden-ui">
+    <div class="crest">
+      <span class="mark kanji">枯山水</span>
+      <span class="rom">Karesansui</span>
+    </div>
+
+    <div class="hero-copy">
+      <h1>A garden that keeps <em>no water</em></h1>
+      <p class="hero-note">Gravel stands in for the sea, stone for the mountain. Drag across the sand to rake it — the lines you leave will soften on their own.</p>
+    </div>
+
+    <div class="instruments">
+      <div class="inst inst--moon">
+        <svg class="moon-svg" id="moon" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"></svg>
+        <div>
+          <div class="label">Moon tonight</div>
+          <div class="v" id="moon-v">—</div>
+        </div>
+      </div>
+      <div class="inst">
+        <div class="label">This sitting</div>
+        <div class="v" id="sit-v">—</div>
+      </div>
+      <div class="inst">
+        <div class="label">Time here</div>
+        <div class="v num" id="timer-v">00:00</div>
+      </div>
+      <button class="rake-reset" id="smooth" type="button">Smooth the sand</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ── Mantra ───────────────────────────────────────────────────────── -->
+  <section class="plot" aria-labelledby="mantra-h">
+    <div class="plot-rail">
+      <span class="glyph kanji">真言</span>
+      <span class="label">Shingon</span>
+    </div>
+    <div class="plot-body">
+      <div class="plot-head">
+        <h2 id="mantra-h">The mantra stone</h2>
+        <p>Two lines, drawn from the garden. Today's arrived with you; press the stone for another.</p>
+      </div>
+
+      <div class="slab mantra">
+        <div class="mantra-body" id="mantra-body" aria-live="polite">
+          <p class="mantra-line" id="m1"></p>
+          <p class="mantra-line" id="m2"></p>
+        </div>
+        <div class="mantra-meta">
+          <span class="label" id="mantra-src">Today's mantra</span>
+        </div>
+        <div class="mantra-controls">
+          <button class="btn" id="draw" type="button">Draw another</button>
+          <button class="btn btn-quiet" id="copy" type="button">Copy</button>
+          <button class="btn btn-quiet" id="bell" type="button" aria-pressed="false">
+            Bell off
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Zodiac ───────────────────────────────────────────────────────── -->
+  <section class="plot" aria-labelledby="star-h">
+    <div class="plot-rail">
+      <span class="glyph kanji">星庭</span>
+      <span class="label">Hoshi‑niwa</span>
+    </div>
+    <div class="plot-body">
+      <div class="plot-head">
+        <h2 id="star-h">The star garden</h2>
+        <p>Twelve stones, one for each sign. Each has an element, a place it would sit in a garden, and something to try.</p>
+      </div>
+
+      <div class="signs" id="signs" role="group" aria-label="Choose your sign"></div>
+
+      <article class="slab reading" id="reading" hidden aria-live="polite">
+        <div class="reading-top">
+          <span class="reading-glyph" id="r-glyph"></span>
+          <div class="reading-id">
+            <h3 id="r-name"></h3>
+            <span class="label num" id="r-dates"></span>
+          </div>
+          <div class="chips">
+            <span class="chip" id="r-elem"></span>
+            <span class="chip" id="r-mode"></span>
+          </div>
+        </div>
+        <p class="reading-essence" id="r-essence"></p>
+        <div class="reading-rows">
+          <div class="rrow">
+            <span class="label">In the garden</span>
+            <p id="r-garden"></p>
+          </div>
+          <div class="rrow">
+            <span class="label">Reading</span>
+            <p class="reading-text" id="r-read"></p>
+          </div>
+          <div class="rrow">
+            <span class="label">Practice</span>
+            <p id="r-practice"></p>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ── Counter ──────────────────────────────────────────────────────── -->
+  <section class="plot" aria-labelledby="count-h">
+    <div class="plot-rail">
+      <span class="glyph kanji">石</span>
+      <span class="label">Ishi</span>
+    </div>
+    <div class="plot-body">
+      <div class="plot-head">
+        <h2 id="count-h">The stone remembers</h2>
+        <p id="count-blurb">A garden this size keeps no register of who came. It only knows how often you did.</p>
+      </div>
+      <div class="plaque">
+        <div class="cell"><span class="label">Sittings</span><span class="v num" id="c-visits">—</span></div>
+        <div class="cell"><span class="label">Time in the garden</span><span class="v num" id="c-total">—</span></div>
+        <div class="cell"><span class="label">First sat</span><span class="v num" id="c-first">—</span></div>
+        <div class="cell"><span class="label">Marks in the sand</span><span class="v num" id="c-marks">0</span></div>
+      </div>
+      <p class="fineprint" id="c-note">Counted in this browser only — nothing is sent anywhere, and clearing your site data empties the stone.</p>
+    </div>
+  </section>
+
+  <footer class="close">
+    <p class="sig">The garden is never finished. That is not a failure.</p>
+    <p>Raked lines last a few minutes here and about a day in Kyoto. Both are on purpose.</p>
+    <p class="fineprint">Type is Shippori Mincho and Zen Kaku Gothic New, both SIL Open Font License 1.1. Moon phase is computed from the synodic month and is accurate to within a few hours.</p>
+  </footer>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  /* ══ helpers ══════════════════════════════════════════════════════════ */
+  function $(id) { return document.getElementById(id); }
+  function tokens() {
+    var cs = getComputedStyle(document.documentElement);
+    return {
+      bg:    cs.getPropertyValue("--sand-bg").trim(),
+      line:  cs.getPropertyValue("--sand-line").trim(),
+      soft:  cs.getPropertyValue("--sand-line-soft").trim(),
+      stone: cs.getPropertyValue("--stone").trim(),
+      hi:    cs.getPropertyValue("--stone-hi").trim(),
+      sh:    cs.getPropertyValue("--stone-sh").trim(),
+      grain: parseFloat(cs.getPropertyValue("--grain")) || 0.04
+    };
+  }
+  var toastT = null;
+  function toast(msg) {
+    var el = $("toast");
+    el.textContent = msg; el.classList.add("show");
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { el.classList.remove("show"); }, 2200);
+  }
+  // Deterministic PRNG so the garden's layout and the day's mantra are stable.
+  function mulberry(seed) {
+    return function () {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  /* ══ 1. The gravel field ══════════════════════════════════════════════ */
+  var cv = $("sand"), ctx = cv.getContext("2d", { alpha: false });
+  var W = 0, H = 0, stones = [], marks = [], totalMarks = 0, grainPat = null, T = tokens();
+  var MAX_MARKS = 44, FADE_MS = 105000;
+
+  // A designed arrangement, not scatter: a 3-stone triad, a solitary, a pair, a distant one.
+  var PLAN = [
+    { x: 0.205, y: 0.455, r: 0.082, moss: true },
+    { x: 0.288, y: 0.560, r: 0.044, moss: false },
+    { x: 0.140, y: 0.598, r: 0.030, moss: true },
+    { x: 0.532, y: 0.305, r: 0.054, moss: false },
+    { x: 0.735, y: 0.630, r: 0.070, moss: true },
+    { x: 0.818, y: 0.692, r: 0.036, moss: false },
+    { x: 0.912, y: 0.352, r: 0.026, moss: false }
+  ];
+
+  function buildGrain() {
+    var n = document.createElement("canvas");
+    n.width = n.height = 96;
+    var nc = n.getContext("2d"), img = nc.createImageData(96, 96), d = img.data;
+    var rnd = mulberry(20260807);
+    for (var i = 0; i < d.length; i += 4) {
+      var v = (rnd() * 255) | 0;
+      d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 26;
+    }
+    nc.putImageData(img, 0, 0);
+    grainPat = ctx.createPattern(n, "repeat");
+  }
+
+  function layout() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var rect = cv.getBoundingClientRect();
+    W = Math.max(1, rect.width); H = Math.max(1, rect.height);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Geometric mean keeps stones in proportion on tall phones as well as wide desktops.
+    var unit = Math.sqrt(W * H);
+    stones = PLAN.map(function (s, i) {
+      var rnd = mulberry(1000 + i * 977);
+      var lobes = [];
+      for (var k = 0; k < 9; k++) lobes.push(0.76 + rnd() * 0.42);
+      return { x: s.x * W, y: s.y * H, r: Math.max(9, s.r * unit), moss: s.moss, lobes: lobes, tilt: rnd() * Math.PI };
+    });
+    buildGrain();
+    draw();
+  }
+
+  // Vertical displacement of a rake line: furrows part outward around obstacles.
+  function displace(x, y) {
+    var d = 0, i, o, dy, sig, dx, q;
+    for (i = 0; i < stones.length; i++) {
+      o = stones[i]; sig = o.r * 1.55; dy = y - o.y;
+      if (dy > sig * 3 || dy < -sig * 3) continue;
+      dx = x - o.x; if (dx > sig * 3 || dx < -sig * 3) continue;
+      q = (dx * dx + dy * dy) / (2 * sig * sig);
+      if (q > 5) continue;
+      d += (dy < 0 ? -1 : 1) * Math.exp(-q) * o.r * 1.15;
+    }
+    for (i = 0; i < marks.length; i++) {
+      o = marks[i]; sig = o.r; dy = y - o.y;
+      if (dy > sig * 3 || dy < -sig * 3) continue;
+      dx = x - o.x; if (dx > sig * 3 || dx < -sig * 3) continue;
+      q = (dx * dx + dy * dy) / (2 * sig * sig);
+      if (q > 5) continue;
+      d += (dy < 0 ? -1 : 1) * Math.exp(-q) * sig * 0.62 * o.a;
+    }
+    return d;
+  }
+
+  function stonePath(o) {
+    // Hull points become curve controls and their midpoints the anchors,
+    // so the silhouette reads as weathered rock rather than a polygon.
+    var n = o.lobes.length, p = [], i, ang, rad;
+    for (i = 0; i < n; i++) {
+      ang = (i / n) * Math.PI * 2 + o.tilt;
+      rad = o.r * o.lobes[i];
+      p.push([o.x + Math.cos(ang) * rad, o.y + Math.sin(ang) * rad * 0.80]);
+    }
+    var mid = function (a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; };
+    var m0 = mid(p[n - 1], p[0]);
+    ctx.beginPath();
+    ctx.moveTo(m0[0], m0[1]);
+    for (i = 0; i < n; i++) {
+      var m = mid(p[i], p[(i + 1) % n]);
+      ctx.quadraticCurveTo(p[i][0], p[i][1], m[0], m[1]);
+    }
+    ctx.closePath();
+  }
+
+  function drawStone(o) {
+    stonePath(o);
+    var g = ctx.createLinearGradient(o.x - o.r, o.y - o.r, o.x + o.r * 0.6, o.y + o.r);
+    g.addColorStop(0, T.hi); g.addColorStop(1, T.stone);
+    ctx.save();
+    ctx.shadowColor = T.sh; ctx.shadowBlur = o.r * 0.9; ctx.shadowOffsetY = o.r * 0.16;
+    ctx.fillStyle = g; ctx.fill();
+    ctx.restore();
+    if (o.moss) {
+      ctx.save(); ctx.clip();                       // moss gathers at the shaded base
+      ctx.fillStyle = "rgba(126,160,126,.15)";
+      ctx.beginPath();
+      ctx.ellipse(o.x - o.r * 0.24, o.y + o.r * 0.50, o.r * 0.54, o.r * 0.24, -0.26, 0, Math.PI * 2);
+      ctx.fill(); ctx.restore();
+    }
+  }
+
+  function draw() {
+    if (!W) return;
+    ctx.fillStyle = T.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    var gap = 11, step = Math.max(3.2, W / 250), y0, x, y;
+    ctx.lineWidth = 1;
+    ctx.lineJoin = "round";
+    for (y0 = -gap * 2; y0 < H + gap * 2; y0 += gap) {
+      ctx.strokeStyle = (Math.round(y0 / gap) % 2 === 0) ? T.line : T.soft;
+      ctx.beginPath();
+      for (x = 0; x <= W + step; x += step) {
+        y = y0 + displace(x, y0);
+        if (x === 0) ctx.moveTo(0, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    for (var i = 0; i < stones.length; i++) drawStone(stones[i]);
+
+    if (grainPat) {
+      ctx.save();
+      ctx.globalAlpha = T.grain; ctx.fillStyle = grainPat;
+      ctx.fillRect(0, 0, W, H); ctx.restore();
+    }
+  }
+
+  /* rake input — marks persist, then soften. */
+  var rafId = null, lastT = 0, lastPaint = 0;
+  function fade(ts) {
+    if (!lastT) lastT = ts;
+    var dt = Math.min(ts - lastT, 200); lastT = ts;
+    var alive = false, kept = [];
+    for (var i = 0; i < marks.length; i++) {
+      marks[i].a -= dt / FADE_MS;
+      if (marks[i].a > 0) { kept.push(marks[i]); alive = true; }
+    }
+    marks = kept;
+    if (ts - lastPaint > 90) { draw(); lastPaint = ts; }
+    if (alive) rafId = requestAnimationFrame(fade);
+    else { rafId = null; lastT = 0; draw(); }
+  }
+  function startFade() {
+    if (reduce.matches || rafId !== null) return;
+    lastT = 0; rafId = requestAnimationFrame(fade);
+  }
+
+  function rake(e) {
+    var rect = cv.getBoundingClientRect();
+    var x = e.clientX - rect.left, y = e.clientY - rect.top;
+    var last = marks[marks.length - 1];
+    if (last) {
+      var ddx = last.x - x, ddy = last.y - y;
+      if (ddx * ddx + ddy * ddy < 110) return;
+    }
+    marks.push({ x: x, y: y, r: 27, a: 1 });
+    totalMarks++;
+    if (marks.length > MAX_MARKS) marks.shift();
+    $("c-marks").textContent = totalMarks;
+    draw();
+    startFade();
+  }
+  cv.addEventListener("pointermove", rake);
+  cv.addEventListener("pointerdown", rake);
+  $("smooth").addEventListener("click", function () {
+    marks = []; draw(); toast("The sand is smooth again.");
+  });
+
+  var resizeT = null;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeT); resizeT = setTimeout(layout, 140);
+  });
+
+  function refreshTheme() { T = tokens(); draw(); }
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    (mq.addEventListener ? mq.addEventListener.bind(mq, "change") : mq.addListener.bind(mq))(refreshTheme);
+  }
+  new MutationObserver(refreshTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  /* ══ 2. Moon ══════════════════════════════════════════════════════════ */
+  var SYNODIC = 29.530588853;
+  function moon(now) {
+    var known = Date.UTC(2000, 0, 6, 18, 14);           // a known new moon
+    var age = ((now.getTime() - known) / 86400000) % SYNODIC;
+    if (age < 0) age += SYNODIC;
+    var theta = (age / SYNODIC) * Math.PI * 2;
+    var illum = (1 - Math.cos(theta)) / 2;
+    var waxing = age < SYNODIC / 2;
+    var name;
+    if (age < 1.0 || age > SYNODIC - 1.0) name = "New";
+    else if (age < 6.4) name = "Waxing crescent";
+    else if (age < 8.4) name = "First quarter";
+    else if (age < 13.8) name = "Waxing gibbous";
+    else if (age < 15.8) name = "Full";
+    else if (age < 21.1) name = "Waning gibbous";
+    else if (age < 23.1) name = "Last quarter";
+    else name = "Waning crescent";
+    return { age: age, illum: illum, waxing: waxing, name: name };
+  }
+  function paintMoon(m) {
+    var svg = $("moon"), c = 15, r = 12.5;
+    var rx = (r * Math.abs(1 - 2 * m.illum)).toFixed(3);
+    var inner = m.illum > 0.5 ? 1 : 0;
+    var lit = "M" + c + " " + (c - r) +
+              " A" + r + " " + r + " 0 0 1 " + c + " " + (c + r) +
+              " A" + rx + " " + r + " 0 0 " + inner + " " + c + " " + (c - r) + " Z";
+    svg.innerHTML =
+      '<circle cx="15" cy="15" r="12.5" fill="var(--ground-3)" stroke="var(--line)" stroke-width="1"/>' +
+      '<g transform="' + (m.waxing ? "" : "translate(30,0) scale(-1,1)") + '">' +
+      '<path d="' + lit + '" fill="var(--brass)"/></g>';
+    $("moon-v").innerHTML = m.name + ' <b>' + Math.round(m.illum * 100) + '%</b>';
+  }
+  var mp = moon(new Date());
+  paintMoon(mp);
+
+  /* ══ 3. Mantra ════════════════════════════════════════════════════════ */
+  var OPEN = [
+    "The stone does not resent the moss.",
+    "Water finds its way without arguing.",
+    "The rake leaves lines; the rain takes them back.",
+    "You are allowed to be unfinished.",
+    "Nothing here is asking you to hurry.",
+    "The moon is not diminished by the cloud.",
+    "A closed hand cannot receive.",
+    "Sit with it before you solve it.",
+    "The pine grows crooked and is still a pine.",
+    "What you resist, you rehearse.",
+    "The garden is never done, and it is not behind.",
+    "Breathe the way a tide arrives — without effort.",
+    "Silence is not empty; it is unhurried.",
+    "You do not have to carry yesterday into this hour.",
+    "Small and steady outlasts loud and brief.",
+    "The bell rings once, then lets go of the sound."
+  ];
+  var CLOSE = [
+    "Begin again.",
+    "Let this breath be enough.",
+    "Set it down.",
+    "Stay a moment longer.",
+    "Nothing needs fixing right now.",
+    "Loosen your jaw. Loosen your grip.",
+    "The next step is the only step.",
+    "You are already here.",
+    "Let the silt settle.",
+    "Choose gently.",
+    "Return to the breath you have.",
+    "Enough for today.",
+    "Move like water, not like weather.",
+    "Rest is also practice.",
+    "Notice, then release.",
+    "Let it be simple."
+  ];
+  var lastPair = -1;
+  function setMantra(a, b, srcLabel) {
+    var body = $("mantra-body");
+    var apply = function () {
+      $("m1").textContent = OPEN[a]; $("m2").textContent = CLOSE[b];
+      $("mantra-src").textContent = srcLabel;
+      body.classList.remove("turning");
+    };
+    if (reduce.matches) { apply(); return; }
+    body.classList.add("turning");
+    setTimeout(apply, 300);
+  }
+  function dayIndex() {
+    var d = new Date();
+    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  }
+  (function todaysMantra() {
+    var rnd = mulberry(dayIndex());
+    var a = Math.floor(rnd() * OPEN.length), b = Math.floor(rnd() * CLOSE.length);
+    lastPair = a * 100 + b;
+    $("m1").textContent = OPEN[a]; $("m2").textContent = CLOSE[b];
+  })();
+  $("draw").addEventListener("click", function () {
+    var a, b, guard = 0;
+    do {
+      a = Math.floor(Math.random() * OPEN.length);
+      b = Math.floor(Math.random() * CLOSE.length);
+    } while (a * 100 + b === lastPair && ++guard < 12);
+    lastPair = a * 100 + b;
+    setMantra(a, b, "Drawn just now");
+    ring();
+  });
+  $("copy").addEventListener("click", function () {
+    var text = $("m1").textContent + " " + $("m2").textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        function () { toast("Mantra copied."); },
+        function () { toast("Copying is blocked here — select the text instead."); }
+      );
+    } else {
+      toast("Copying is blocked here — select the text instead.");
+    }
+  });
+
+  /* the rin bell — inharmonic partials, struck once */
+  var ac = null, bellOn = false;
+  function ring() {
+    if (!bellOn) return;
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === "suspended") ac.resume();
+    } catch (err) { return; }
+    var t = ac.currentTime;
+    var out = ac.createGain(); out.gain.value = 0.20; out.connect(ac.destination);
+    var partials = [[1, 1.0, 7.0], [1.004, 0.55, 6.6], [2.756, 0.40, 4.4], [5.404, 0.20, 2.9], [8.933, 0.10, 1.8]];
+    for (var i = 0; i < partials.length; i++) {
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = "sine"; o.frequency.value = 528 * partials[i][0];
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(partials[i][1], t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + partials[i][2]);
+      o.connect(g); g.connect(out);
+      o.start(t); o.stop(t + partials[i][2] + 0.06);
+    }
+  }
+  $("bell").addEventListener("click", function () {
+    bellOn = !bellOn;
+    this.setAttribute("aria-pressed", String(bellOn));
+    this.textContent = bellOn ? "Bell on" : "Bell off";
+    if (bellOn) ring();
+  });
+
+  /* ══ 4. The star garden ═══════════════════════════════════════════════ */
+  var SIGNS = [
+    { g: "♈", n: "Aries", d: "Mar 21 – Apr 19", el: "Fire", ek: "火", mo: "Cardinal",
+      garden: "The first stone set — the one every other stone is placed against.",
+      essence: "Begins before the ground is ready.",
+      read: "You start things the way a spring rises: suddenly, and from underneath. The cost is that you often mistake momentum for direction. Nothing you have begun is wasted — some of it is just waiting for you to come back with more patience than you had the first time.",
+      practice: "Before the next thing you start, finish one thing that is already ninety percent done." },
+    { g: "♉", n: "Taurus", d: "Apr 20 – May 20", el: "Earth", ek: "土", mo: "Fixed",
+      garden: "The moss bed, which took nine years and cannot be hurried.",
+      essence: "Slow is a strategy, not a flaw.",
+      read: "You build things that hold weight. But the same steadiness that makes you reliable makes you slow to leave rooms you have outgrown. Comfort and contentment wear the same coat, and you are the only one who can tell them apart.",
+      practice: "Name one comfort that is quietly costing you something." },
+    { g: "♊", n: "Gemini", d: "May 21 – Jun 20", el: "Air", ek: "風", mo: "Mutable",
+      garden: "The bamboo — hollow on purpose, which is the reason it sings.",
+      essence: "Two minds, one breath.",
+      read: "You are not scattered; you are running several conversations and most of them are useful. The trouble starts when you talk yourself out of a feeling before you have finished having it. Curiosity is your gift, but it is not a substitute for choosing.",
+      practice: "Sit with one question today without looking up the answer." },
+    { g: "♋", n: "Cancer", d: "Jun 21 – Jul 22", el: "Water", ek: "水", mo: "Cardinal",
+      garden: "The stone basin, which holds what falls and gives it back clear.",
+      essence: "Keeps the door open, guards the room.",
+      read: "You read the temperature of a room before anyone speaks, then adjust yourself to warm it. That is real work, and mostly unpaid. The tide you keep going out for is allowed to come back in for you sometimes.",
+      practice: "Ask for something small before you offer anything." },
+    { g: "♌", n: "Leo", d: "Jul 23 – Aug 22", el: "Fire", ek: "火", mo: "Fixed",
+      garden: "The stone lantern, whose whole purpose is to be seen and to make seeing possible.",
+      essence: "Warm on purpose.",
+      read: "You give generously and you like it noticed — there is no shame in that; a light that hides helps nobody. What steadies you is remembering you were warm before anyone was watching, and you will still be warm after they look away.",
+      practice: "Do one generous thing today that nobody will find out about." },
+    { g: "♍", n: "Virgo", d: "Aug 23 – Sep 22", el: "Earth", ek: "土", mo: "Mutable",
+      garden: "The raked lines — held straight by hand, redone after every rain.",
+      essence: "Care, mistaken for criticism.",
+      read: "You notice the flaw because you can see the finished thing so clearly. Everyone benefits from that except you, who lives in the gap between the two. The garden is raked every morning not because it failed overnight, but because raking is the point.",
+      practice: "Let one imperfect thing stay imperfect today, on purpose." },
+    { g: "♎", n: "Libra", d: "Sep 23 – Oct 22", el: "Air", ek: "風", mo: "Cardinal",
+      garden: "The spacing of the stones — the empty ground weighed as carefully as the rock.",
+      essence: "Balance is an active verb.",
+      read: "You hold the middle so well that people forget you have a side. Fairness is not the same as having no preference, and the room can take your preference better than you think. A garden with no asymmetry is a parking lot.",
+      practice: "State one preference today without softening it first." },
+    { g: "♏", n: "Scorpio", d: "Oct 23 – Nov 21", el: "Water", ek: "水", mo: "Fixed",
+      garden: "The deep pool, which looks still and is not shallow.",
+      essence: "Knows the whole story, tells the useful part.",
+      read: "You go all the way to the bottom of things, which is why people trust you with what they cannot say out loud. The risk is not intensity — it is that you keep your own bottom to yourself and call that strength. Depth is only useful if someone is allowed in.",
+      practice: "Tell one person one true thing you were planning to keep." },
+    { g: "♐", n: "Sagittarius", d: "Nov 22 – Dec 21", el: "Fire", ek: "火", mo: "Mutable",
+      garden: "The borrowed scenery — the far mountain the whole garden was framed around.",
+      essence: "Aimed at the horizon.",
+      read: "You keep the far view in frame, which makes the near view feel small — and it is, but it is where you live. The honesty you are known for is easiest to give and hardest to receive. Freedom you never come back from is not freedom; it is just distance.",
+      practice: "Make one plan today that has an actual date on it." },
+    { g: "♑", n: "Capricorn", d: "Dec 22 – Jan 19", el: "Earth", ek: "土", mo: "Cardinal",
+      garden: "The retaining wall — nobody photographs it, and everything rests on it.",
+      essence: "Builds in stone, not in season.",
+      read: "You take the long view and pay for it in advance. The thing worth questioning is not whether you can carry it — you can — but whether you agreed to carry it or simply picked it up because it was there. Not every weight is yours.",
+      practice: "Put down one responsibility you were never actually assigned." },
+    { g: "♒", n: "Aquarius", d: "Jan 20 – Feb 18", el: "Air", ek: "風", mo: "Fixed",
+      garden: "The gate left slightly open — a deliberate break in an otherwise closed wall.",
+      essence: "Loyal to the idea, restless with the room.",
+      read: "You see the system rather than the seating chart, and you keep pointing at what could be different. That is valuable and lonely in equal measure. Distance makes the pattern clear; it does not keep anybody warm.",
+      practice: "Say the obvious, unclever, affectionate thing to someone today." },
+    { g: "♓", n: "Pisces", d: "Feb 19 – Mar 20", el: "Water", ek: "水", mo: "Mutable",
+      garden: "The dusk mist, which arrives on schedule and makes the near stones far.",
+      essence: "Porous, and not by accident.",
+      read: "You take on what is in the air — moods, music, other people's weather — and turn it into something worth keeping. The boundary you think you are missing is not a wall; it is knowing which feeling came in the door with you. Drifting and floating are different verbs.",
+      practice: "Before you take on a mood today, ask whose it was first." }
+  ];
+
+  var VS15 = "︎";                       // force text, not colour-emoji, presentation
+  var list = $("signs");
+  SIGNS.forEach(function (s, i) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "sign-btn";
+    b.setAttribute("aria-pressed", "false");
+    b.innerHTML = '<span class="g" aria-hidden="true">' + s.g + VS15 + '</span>' +
+                  '<span class="n">' + s.n + '</span>' +
+                  '<span class="d">' + s.d + '</span>';
+    b.addEventListener("click", function () { pick(i); });
+    list.appendChild(b);
+  });
+
+  function pick(i) {
+    var s = SIGNS[i];
+    var btns = list.querySelectorAll(".sign-btn");
+    for (var k = 0; k < btns.length; k++) btns[k].setAttribute("aria-pressed", String(k === i));
+    $("r-glyph").textContent = s.g + VS15;
+    $("r-name").textContent = s.n;
+    $("r-dates").textContent = s.d;
+    $("r-elem").innerHTML = '<span class="k">' + s.ek + '</span>' + s.el;
+    $("r-mode").textContent = s.mo;
+    $("r-essence").textContent = s.essence;
+    $("r-garden").textContent = s.garden;
+    $("r-read").textContent = s.read;
+    $("r-practice").textContent = s.practice;
+    $("reading").hidden = false;
+  }
+
+  /* ══ 5. The stone that remembers ══════════════════════════════════════ */
+  var store = (function () {
+    try {
+      var k = "__zg"; localStorage.setItem(k, "1"); localStorage.removeItem(k);
+      return localStorage;
+    } catch (err) { return null; }
+  })();
+  function get(k, dflt) {
+    if (!store) return dflt;
+    var v = store.getItem(k);
+    return v === null ? dflt : v;
+  }
+  function set(k, v) { if (store) { try { store.setItem(k, v); } catch (err) {} } }
+
+  var visits = parseInt(get("zg.visits", "0"), 10) + 1;
+  var carried = parseInt(get("zg.total", "0"), 10) || 0;
+  var first = get("zg.first", "");
+  if (!first) { first = new Date().toISOString(); set("zg.first", first); }
+  set("zg.visits", String(visits));
+
+  function ordinal(n) {
+    var s = ["th", "st", "nd", "rd"], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+  function clock(ms) {
+    var t = Math.floor(ms / 1000);
+    var h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), sec = t % 60;
+    var mm = (m < 10 ? "0" : "") + m, ss = (sec < 10 ? "0" : "") + sec;
+    return h > 0 ? h + ":" + mm + ":" + ss : mm + ":" + ss;
+  }
+  function spanWords(ms) {
+    var min = Math.floor(ms / 60000);
+    if (min < 1) return "under a minute";
+    if (min < 60) return min + " min";
+    var h = Math.floor(min / 60), m = min % 60;
+    return h + " hr" + (m ? " " + m + " min" : "");
+  }
+
+  var started = Date.now();
+  $("sit-v").innerHTML = 'Your <b>' + ordinal(visits) + '</b>';
+  $("c-visits").textContent = ordinal(visits);
+  $("c-first").textContent = new Date(first).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  if (!store) {
+    $("c-note").textContent = "This browser is blocking local storage, so the stone forgets the moment you leave. Only this sitting is counted.";
+    $("count-blurb").textContent = "A garden this size keeps no register of who came. It would like to know how often you did, but it cannot remember here.";
+  }
+
+  function tickCounters() {
+    var elapsed = Date.now() - started;
+    $("timer-v").textContent = clock(elapsed);
+    $("c-total").textContent = spanWords(carried + elapsed);
+  }
+  tickCounters();
+  setInterval(tickCounters, 1000);
+
+  function persist() { set("zg.total", String(carried + (Date.now() - started))); }
+  window.addEventListener("pagehide", persist);
+  document.addEventListener("visibilitychange", function () { if (document.hidden) persist(); });
+  setInterval(persist, 15000);
+
+  /* ══ go ═══════════════════════════════════════════════════════════════ */
+  layout();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+})();
+</script>
