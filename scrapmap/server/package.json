@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.build.json && node scripts/copy-schema.mjs",
     "start": "node --disable-warning=ExperimentalWarning dist/index.js",
     "seed": "node --disable-warning=ExperimentalWarning --experimental-strip-types src/db/seed.ts",
-    "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test src/test/api.test.ts",
+    "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test src/test/api.checks.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check:apis": "node --disable-warning=ExperimentalWarning --experimental-strip-types src/scripts/check-apis.ts"
   },

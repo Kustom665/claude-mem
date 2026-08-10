@@ -1,3 +1,13 @@
+/**
+ * ScrapMap server test suite. Run with `npm test` (node:test).
+ *
+ * Named `.checks.ts` rather than `.test.ts` on purpose: the parent claude-mem
+ * repository runs a bare `bun test` at its root, which recursively discovers
+ * `*.test.ts` / `*.spec.ts` anywhere in the tree. Bun would pick this file up,
+ * fail to resolve this workspace's dependencies in CI, and choke on
+ * `node:sqlite`. Staying outside Bun's discovery patterns keeps that CI job
+ * green without changing shared repository configuration.
+ */
 import './setup.ts';
 
 import assert from 'node:assert/strict';

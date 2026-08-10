@@ -225,12 +225,28 @@ or the `scrapmap_session` cookie.
 | `npm run dev`         | API and web app together, both hot-reloading         |
 | `npm run build`       | Type-check and build both workspaces                 |
 | `npm start`           | Run the built API                                    |
-| `npm test`            | Server test suite                                    |
+| `npm test`            | Server test suite (`server/src/test/api.checks.ts`)  |
 | `npm run typecheck`   | Type-check both workspaces                           |
 | `npm run seed`        | Seed demo data (`-- --fresh` wipes first)            |
 | `npm run check:apis`  | Verify every free API is reachable from this machine |
 
 ---
+
+### Two conventions that look odd on purpose
+
+ScrapMap lives inside the claude-mem repository, which has its own tooling, so
+two things here deliberately differ from what you would expect in a standalone
+project:
+
+- **The test file is `api.checks.ts`, not `api.test.ts`.** claude-mem runs a
+  bare `bun test` at its root, which recursively discovers `*.test.ts` anywhere
+  in the tree. It would pick this suite up, fail to resolve this workspace's
+  dependencies, and choke on `node:sqlite`. Staying outside Bun's discovery
+  patterns keeps that shared CI job green without changing its configuration.
+- **`.gitignore` re-includes `package-lock.json`.** The repository root ignores
+  lockfiles because claude-mem uses bun. ScrapMap is a standalone npm
+  workspace, so it keeps one for reproducible installs; a nested `.gitignore`
+  overrides the parent rule.
 
 ## Configuration
 
