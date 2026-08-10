@@ -2,11 +2,14 @@ import { Kernel } from './kernel/kernel.ts';
 import { allPrograms } from './programs/index.ts';
 import { createProvider, type LLMProvider } from './llm/provider.ts';
 import type { ConsoleDevice } from './kernel/console.ts';
+import type { NetworkDevice } from './kernel/net.ts';
 
 export interface BootOptions {
   console: ConsoleDevice;
   /** Defaults to the real API when ANTHROPIC_API_KEY is set, else the mock. */
   llm?: LLMProvider;
+  /** Defaults to real WebSockets. */
+  net?: NetworkDevice;
   /** Program init should start. Defaults to `sh`. */
   initTarget?: string;
   /** argv for the boot target. */
@@ -21,6 +24,7 @@ export function createSystem(opts: BootOptions): Kernel {
   const kernel = new Kernel({
     console: opts.console,
     llm: opts.llm ?? createProvider(),
+    net: opts.net,
     keepAlive: opts.keepAlive,
   });
   kernel.register(...allPrograms);

@@ -6,6 +6,7 @@ import { ProcState, Signal, FD, PRIORITY } from './types.ts';
 import type { Message, ProcessInfo, Program, SpawnOptions, SyscallRequest } from './types.ts';
 import { ENOENT, ENOEXEC, ENOSYS, ESRCH, EACCES, KernelError } from './errors.ts';
 import type { ConsoleDevice } from './console.ts';
+import { WebSocketNetwork, redactUrl, type NetworkDevice, type Socket } from './net.ts';
 import type { LLMProvider } from '../llm/provider.ts';
 import type { InferOptions } from './syscalls.ts';
 
@@ -25,6 +26,8 @@ const YIELD = Symbol('yield');
 export interface KernelOptions {
   console: ConsoleDevice;
   llm: LLMProvider;
+  /** Defaults to real WebSockets. Tests substitute a scripted network. */
+  net?: NetworkDevice;
   /** Keep the kernel alive even when no process is runnable or blocked. */
   keepAlive?: boolean;
 }
@@ -46,7 +49,12 @@ export class Kernel {
   readonly programs = new Map<string, Program>();
   readonly console: ConsoleDevice;
   readonly llm: LLMProvider;
+  readonly net: NetworkDevice;
   readonly bootedAt = Date.now();
+
+  /** Open sockets by file descriptor. 0-2 are reserved for stdio. */
+  private readonly sockets = new Map<number, { socket: Socket; owner: number; url: string }>();
+  private nextFd = 3;
 
   keepAlive: boolean;
   running = false;
@@ -64,6 +72,7 @@ export class Kernel {
   constructor(opts: KernelOptions) {
     this.console = opts.console;
     this.llm = opts.llm;
+    this.net = opts.net ?? new WebSocketNetwork();
     this.keepAlive = opts.keepAlive ?? false;
     this.mountProc();
   }
@@ -282,6 +291,10 @@ export class Kernel {
     this.scheduler.remove(proc);
     proc.terminate(code);
 
+    // Release kernel resources the process was holding, or a killed daemon
+    // would leave its connection open for the life of the system.
+    this.closeSocketsOf(proc.pid);
+
     // Anything blocked receiving from this process must not wait forever.
     const waiter = this.recvWaiters.get(proc.pid);
     if (waiter) {
@@ -490,6 +503,36 @@ export class Kernel {
       case 'forget':
         return this.memory.forget(a as string);
 
+      // ---- sockets ----
+      case 'connect': {
+        const url = a as string;
+        const owner = proc.pid;
+        return this.net.connect(url).then((socket) => {
+          // The process may have died while the handshake was in flight.
+          if (this.processes.get(owner)?.exitCode != null || !this.processes.has(owner)) {
+            socket.close();
+            throw new KernelError(`connection abandoned: process ${owner} exited`, 'ESRCH');
+          }
+          const fd = this.nextFd++;
+          this.sockets.set(fd, { socket, owner, url: redactUrl(url) });
+          return fd;
+        });
+      }
+      case 'sockSend': {
+        const entry = this.socketFor(proc, a as number);
+        entry.socket.send(b as string);
+        return true;
+      }
+      case 'sockRecv':
+        return this.socketFor(proc, a as number).socket.recv();
+      case 'sockClose': {
+        const fd = a as number;
+        const entry = this.socketFor(proc, fd);
+        entry.socket.close();
+        this.sockets.delete(fd);
+        return true;
+      }
+
       // ---- inference ----
       case 'infer':
         return this.llm.complete(a as string, (b as InferOptions) ?? {});
@@ -513,6 +556,29 @@ export class Kernel {
 
       default:
         throw new ENOSYS(req.call);
+    }
+  }
+
+  /** Resolve a file descriptor, enforcing that the caller owns it. */
+  private socketFor(proc: Process, fd: number): { socket: Socket; owner: number; url: string } {
+    const entry = this.sockets.get(fd);
+    if (!entry) throw new KernelError(`bad file descriptor: ${fd}`, 'EBADF');
+    // Descriptors are per-process; there is no dup/inherit, so another
+    // process holding this fd number would be a bug, not a feature.
+    if (entry.owner !== proc.pid) throw new EACCES(`fd ${fd} belongs to process ${entry.owner}`);
+    return entry;
+  }
+
+  /** Close every socket owned by a process. Called when it exits. */
+  private closeSocketsOf(pid: number): void {
+    for (const [fd, entry] of this.sockets) {
+      if (entry.owner !== pid) continue;
+      try {
+        entry.socket.close();
+      } catch {
+        /* already closed */
+      }
+      this.sockets.delete(fd);
     }
   }
 
@@ -579,6 +645,8 @@ export class Kernel {
       contextSwitches: this.scheduler.contextSwitches,
       memoryEntries: this.memory.size,
       provider: this.llm.name,
+      network: this.net.name,
+      openSockets: this.sockets.size,
       programs: this.programs.size,
     };
   }

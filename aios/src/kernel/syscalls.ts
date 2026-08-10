@@ -93,6 +93,21 @@ export const sys = {
   /** Delete a stored fact. */
   forget: (key: string) => call('forget', key),
 
+  // ---- sockets ----
+
+  /**
+   * Open a WebSocket connection. Blocks until the handshake completes and
+   * resolves to a file descriptor. Descriptors are per-process and are closed
+   * automatically when the process exits.
+   */
+  connect: (url: string) => call('connect', url),
+  /** Send a frame. */
+  sockSend: (fd: number, data: string) => call('sockSend', fd, data),
+  /** Block for the next frame. Resolves to null once the peer closes. */
+  sockRecv: (fd: number) => call('sockRecv', fd),
+  /** Close a socket. */
+  sockClose: (fd: number) => call('sockClose', fd),
+
   // ---- inference ----
 
   /**

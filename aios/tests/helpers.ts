@@ -4,15 +4,17 @@ import { MockProvider, type LLMProvider } from '../src/llm/provider.ts';
 import { allPrograms } from '../src/programs/index.ts';
 import type { InferOptions } from '../src/kernel/syscalls.ts';
 import type { Program } from '../src/kernel/types.ts';
+import type { NetworkDevice } from '../src/kernel/net.ts';
 
 /** Build a kernel with all stock programs plus any extras, ready to boot. */
 export function makeKernel(
-  opts: { input?: string[]; llm?: LLMProvider; programs?: Program[] } = {},
+  opts: { input?: string[]; llm?: LLMProvider; net?: NetworkDevice; programs?: Program[] } = {},
 ): { kernel: Kernel; console: ScriptedConsole } {
   const console_ = new ScriptedConsole(opts.input ?? []);
   const kernel = new Kernel({
     console: console_,
     llm: opts.llm ?? new MockProvider(0),
+    net: opts.net,
   });
   kernel.register(...allPrograms, ...(opts.programs ?? []));
   return { kernel, console: console_ };
