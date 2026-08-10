@@ -1,0 +1,196 @@
+# Notary Desk
+
+Practice management and a tamper-evident electronic journal for mobile notaries
+and loan signing agents. Built Pennsylvania-first.
+
+Three things distinguish it from the $9/month notary bookkeeping tools:
+
+1. **The journal is tamper-evident.** Every entry is sealed into a SHA-256 hash
+   chain at write time. There is no edit or delete path anywhere in the
+   application — a mistake is corrected by appending an amending entry, exactly
+   as you would line out and annotate a paper journal. Pennsylvania's RULONA
+   permits an electronic journal *provided it is tamper-evident*, which is the
+   standard this is built to meet.
+
+2. **Compliance rules are enforced, not documented.** The rules run in opposite
+   directions between states — California *requires* a thumbprint for deeds and
+   powers of attorney, Pennsylvania *prohibits* recording biometrics at all — so
+   the journal form renders a thumbprint field only where it is lawful, and the
+   server refuses a fee above the state maximum.
+
+3. **It produces the self-employment tax split.** Fees for notarial acts are
+   exempt from SE tax; travel, printing and signing-service fees are not. The
+   split has to be captured per act as the work happens, which is why fees live
+   on journal entries and not just on invoices.
+
+Every rule traces to a cited source in [`docs/RESEARCH.md`](docs/RESEARCH.md).
+
+---
+
+## Quick start
+
+```bash
+npm install
+cp .env.example .env
+npm run setup     # generate client, apply migrations, load demo data
+npm run dev       # http://localhost:3000
+```
+
+Sign in with the demo notary:
+
+```
+demo@notarydesk.test  /  notary-demo-2026
+```
+
+The demo account is a Pennsylvania signing agent with a month of work: 12 chained
+journal entries, 6 signings, 4 clients, mileage across both 2026 IRS rates, and
+two invoices. Its commission and background check are deliberately close to
+expiry so the dashboard warnings are visible.
+
+```bash
+npm test          # 64 unit tests
+npm run typecheck
+npm run build
+```
+
+---
+
+## What's in it
+
+| Module | What it does |
+|---|---|
+| **Journal** | Sealed, hash-chained entries. Search, chain verification, amendments, CSV export with digests, printable audit copy, and a redacted public-inspection view. |
+| **Signings** | Appointments with a status pipeline, location, loan/escrow detail, fees, and automatic mileage logging. |
+| **Clients** | Title companies, escrow, signing services, law firms, direct clients. Payment terms and revenue per client. |
+| **Billing** | Invoices generated from completed unbilled signings, itemised notarial vs service fees. Mileage log. Editable fee schedule with statutory maximums. |
+| **Reports** | Schedule C and Schedule SE views with the notarial exemption applied, act counts, and mileage bucketed by IRS rate. |
+| **Certificates** | PA RULONA §316 short forms plus generic forms, filled from your commission details and printable. |
+| **Compliance** | Commission, E&O, bond and background-check expiry warnings. State-aware journal field rules. |
+| **Integrations** | Signed outbound webhooks to GoHighLevel. |
+
+---
+
+## The GoHighLevel handoff
+
+This app owns the notary record — journal, acts, fees, compliance state. It is
+deliberately **not** a CRM, because a CRM is the one genuinely commoditised part
+of this product.
+
+Business events are pushed outward over signed webhooks, and the automation
+platform owns pipelines, SMS and email nurture, review requests and rebooking.
+
+| Event | Fires when | Typical use in GHL |
+|---|---|---|
+| `signing.scheduled` | A signing is created or moves to scheduled/confirmed | Confirmation text, calendar invite |
+| `signing.completed` | Status changes to completed | Review request, referral follow-up |
+| `signing.cancelled` | Cancelled or no-show | Back to the rebooking pipeline |
+| `client.created` | A client is added | Nurture sequence for the title company |
+| `invoice.sent` | Invoice marked sent | Payment reminder sequence |
+| `invoice.paid` | Invoice settled | Stop reminders, send thanks |
+| `journal.entry_created` | An act is recorded | Act-count dashboards |
+| `compliance.expiring` | A credential nears expiry | Renewal nudge |
+
+Set up in **Settings → Integrations**: paste the URL from a GoHighLevel *Inbound
+Webhook* trigger, pick your events, send a test, then map the sample payload in
+GHL. Status transitions only fire once, so re-saving a completed signing will
+not re-trigger a review campaign.
+
+Deliveries are signed with HMAC-SHA256 over `timestamp.body` and sent as
+`x-notarydesk-signature`, with the delivery log and one-click retry in the same
+screen. GoHighLevel's inbound webhook step cannot verify an HMAC, so a direct GHL
+setup relies on the URL staying secret — the signature is there for when you put
+a function in front of it.
+
+---
+
+## Deployment
+
+### Vercel + Postgres
+
+The schema is written to the intersection of SQLite and PostgreSQL — no Prisma
+enums, no scalar lists, integer cents rather than floats — and the driver
+adapter is chosen from the URL scheme at runtime. Switching is one command plus
+a migration:
+
+```bash
+npm run db:use-postgres        # flips the provider, archives SQLite migrations
+npm install @prisma/adapter-pg pg
+# set DATABASE_URL to your postgres:// URL
+npx prisma migrate dev -n init
+```
+
+Then deploy:
+
+1. Point Vercel at this directory (`apps/notary`) as the project root.
+2. Set environment variables:
+   - `DATABASE_URL` — your Postgres connection string
+   - `SESSION_SECRET` — generate with
+     `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`
+3. Build command `npm run build`, install command `npm install`.
+4. Run `npx prisma migrate deploy` against production once.
+
+The app refuses to start in production without a real `SESSION_SECRET`.
+
+### Anywhere else
+
+It is a standard Next.js server app. `npm run build && npm start` behind any
+Node host works; keep the SQLite file on a persistent volume if you stay on
+SQLite.
+
+---
+
+## How the journal chain works
+
+Each sealed entry stores a SHA-256 digest computed over its own substantive
+fields **plus the digest of the entry before it**. Editing a historical entry
+changes its digest, which breaks the link to the entry after it, and so on to
+the end of the journal. `/journal/verify` recomputes the whole chain and reports
+exactly where a break starts, distinguishing four failure modes: a row edited in
+place, a row spliced in, a row deleted, and a duplicated journal number.
+
+Field names and values are joined with control characters (`U+0000`, `U+0001`)
+rather than printable separators, so a document type of `Deed` with a
+description of `of Trust` cannot collide with `Deedof` / `Trust`.
+
+**What this does not prove.** Anyone with database access can rewrite rows *and*
+recompute every digest. The defence is external: record your head digest
+somewhere outside the system — email it to yourself monthly, or write it in a
+notebook. A digest held elsewhere on a known date turns "internally consistent"
+into "provably unchanged since then". The verify page says this in plain
+language rather than overselling the guarantee.
+
+---
+
+## Architecture notes
+
+- **Next.js 16** App Router, React 19, server components and server actions
+  throughout. Client components only where interactivity demands it.
+- **Prisma 7** with driver adapters. The connection URL lives in
+  `prisma.config.ts`, not the schema — a Prisma 7 change. Relative `file:` URLs
+  resolve against the project root.
+- **Multi-tenancy** is `requireUser()` plus a `userId` filter on every query.
+  There is no shared query path that omits the scope; writes that take an id use
+  `updateMany`/`deleteMany` scoped by `userId`, so a forged id affects zero rows.
+- **Sessions** are opaque random tokens stored server-side, not JWTs, so they
+  can actually be revoked. The database holds an HMAC of the token, not the
+  token.
+- **Money** is integer cents everywhere.
+- **CSV exports** neutralise formula injection — a signer named `=cmd|...` must
+  not execute when an accountant opens the file.
+
+---
+
+## Legal disclaimer
+
+This software is a record-keeping and business tool. It is **not legal advice**
+and it is not a substitute for your commissioning authority's handbook.
+
+Reference data — fee maximums, journal rules, certificate wording — was captured
+on **10 August 2026** and is displayed in the app with that date attached.
+Notary law changes every legislative session. Verify anything you are relying on
+against your own state's current rules before acting on it, and confirm with
+your commissioning authority that an electronic journal is acceptable as your
+journal of record before retiring a paper book.
+
+The tax reporting is a bookkeeping aid, not tax advice. Hand the figures to a
+preparer rather than filing from them directly.

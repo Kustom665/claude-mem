@@ -1,0 +1,40 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# production
+build/
+dist/
+
+# local env
+.env
+.env*.local
+
+# database (local dev SQLite)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+prisma/dev.db*
+
+# generated Prisma client — rebuilt by `prisma generate`, which `npm run build`
+# and `npm run setup` both run
+src/generated/
+
+# testing
+coverage/
+
+# misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+
+# The repo root .gitignore excludes package-lock.json globally.
+# This app is a standalone deployable, so its lockfile must be committed.
+!package-lock.json

@@ -1,0 +1,472 @@
+// Notary Desk — data model
+//
+// Portability note: this schema is deliberately written to the intersection of
+// SQLite and PostgreSQL features so the same migrations work in local dev and
+// in production. That means:
+//   - no Prisma `enum` blocks (unsupported on SQLite) — enumerated values are
+//     String columns validated by Zod at the edge, with the union types living
+//     in src/lib/domain.ts as the single source of truth
+//   - no scalar lists / Json[] columns
+//   - all money is stored as integer cents, never Float
+// Run `npm run db:use-postgres` to flip the provider; nothing else changes.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+// Prisma 7 moved the connection URL out of the schema. It lives in
+// prisma.config.ts for migrate/introspect, and reaches the runtime client
+// through a driver adapter — see src/lib/db.ts.
+datasource db {
+  provider = "sqlite"
+}
+
+// ---------------------------------------------------------------------------
+// Tenant: one row per notary. Every other table hangs off this and every query
+// in the app is scoped by userId — see requireUser() in src/lib/auth.ts.
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String @id @default(cuid())
+  email        String @unique
+  passwordHash String
+  name         String
+
+  // Business identity
+  businessName String?
+  phone        String?
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postalCode   String?
+
+  // Commission of record. Expiry drives the compliance warnings on the
+  // dashboard — a notarization performed on an expired commission is void in
+  // every US jurisdiction, so this is the single most important date here.
+  commissionNumber    String?
+  commissionState     String?
+  commissionCounty    String?
+  commissionIssuedOn  DateTime?
+  commissionExpiresOn DateTime?
+  sealDescription     String?
+
+  // Signing-agent credentials (loan signing work requires these; general
+  // notary work does not).
+  isSigningAgent           Boolean   @default(false)
+  backgroundCheckExpiresOn DateTime?
+  eoPolicyNumber           String?
+  eoCoverageCents          Int?
+  eoExpiresOn              DateTime?
+  bondNumber               String?
+  bondAmountCents          Int?
+  bondExpiresOn            DateTime?
+
+  // Preferences
+  timezone           String @default("America/Los_Angeles")
+  mileageRateCents   Int    @default(70)
+  journalStartNumber Int    @default(1)
+  invoicePrefix      String @default("INV")
+  invoiceTermsDays   Int    @default(30)
+
+  // Subscription seam. Billing is not wired to a payment processor yet; these
+  // fields exist so gating can be added without a migration.
+  plan               String    @default("trial")
+  subscriptionStatus String    @default("trialing")
+  trialEndsOn        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions             Session[]
+  clients              Client[]
+  signings             Signing[]
+  journalEntries       JournalEntry[]
+  mileageEntries       MileageEntry[]
+  invoices             Invoice[]
+  feeScheduleItems     FeeScheduleItem[]
+  certificateTemplates CertificateTemplate[]
+  integrations         Integration[]
+  webhookDeliveries    WebhookDelivery[]
+
+  @@index([email])
+}
+
+// ---------------------------------------------------------------------------
+// Outbound integrations.
+//
+// This app owns the notary-specific record: the journal, the acts, the fees,
+// the compliance state. It deliberately does not try to be a CRM. Business
+// events are pushed to an external automation platform — GoHighLevel is the
+// intended target — which owns nurture, pipelines, SMS and email.
+// ---------------------------------------------------------------------------
+
+model Integration {
+  id     String @id @default(cuid())
+  userId String
+
+  provider String @default("GOHIGHLEVEL")
+  /** Inbound webhook URL of the target workflow. */
+  webhookUrl String?
+  /** Shared secret; deliveries are signed with HMAC-SHA256 over the body. */
+  webhookSecret String?
+  enabled       Boolean @default(false)
+
+  /** Comma-separated event names this integration subscribes to. */
+  subscribedEvents String @default("signing.scheduled,signing.completed,client.created,invoice.sent")
+
+  lastDeliveryAt     DateTime?
+  lastDeliveryStatus String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@unique([userId, provider])
+  @@index([userId])
+}
+
+model WebhookDelivery {
+  id            String @id @default(cuid())
+  userId        String
+  integrationId String
+
+  event   String
+  /** JSON body as sent, retained so a failed delivery can be replayed. */
+  payload String
+  status  String @default("PENDING")
+
+  statusCode   Int?
+  responseBody String?
+  error        String?
+  attempts     Int     @default(0)
+
+  createdAt   DateTime  @default(now())
+  deliveredAt DateTime?
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([integrationId, status])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Clients — who pays. For a signing agent this is mostly title companies,
+// escrow officers and signing services rather than the person signing.
+// ---------------------------------------------------------------------------
+
+model Client {
+  id     String @id @default(cuid())
+  userId String
+
+  name        String
+  type        String  @default("SIGNING_SERVICE")
+  contactName String?
+  email       String?
+  phone       String?
+
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postalCode   String?
+
+  defaultFeeCents  Int?
+  paymentTermsDays Int     @default(30)
+  notes            String?
+  isActive         Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signings Signing[]
+  invoices Invoice[]
+
+  @@index([userId, isActive])
+  @@index([userId, name])
+}
+
+// ---------------------------------------------------------------------------
+// Signings — the appointment/job. One signing can produce many notarial acts,
+// which is why JournalEntry is a separate table rather than fields here.
+// ---------------------------------------------------------------------------
+
+model Signing {
+  id       String  @id @default(cuid())
+  userId   String
+  clientId String?
+
+  title  String
+  type   String @default("LOAN_SIGNING")
+  status String @default("SCHEDULED")
+
+  scheduledAt     DateTime
+  durationMinutes Int       @default(60)
+  completedAt     DateTime?
+
+  signerName   String?
+  signerPhone  String?
+  signerEmail  String?
+  coSignerName String?
+
+  locationName String?
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postalCode   String?
+
+  loanNumber      String?
+  escrowNumber    String?
+  propertyAddress String?
+  documentCount   Int?
+
+  // Fees are captured per signing so an invoice can be generated straight from
+  // completed work without re-keying anything.
+  signingFeeCents    Int   @default(0)
+  travelFeeCents     Int   @default(0)
+  printFeeCents      Int   @default(0)
+  additionalFeeCents Int   @default(0)
+  mileageMiles       Float @default(0)
+
+  scanBacksRequired Boolean   @default(false)
+  shippingCarrier   String?
+  trackingNumber    String?
+  docsReturnedAt    DateTime?
+
+  notes     String?
+  invoiceId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client         Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  invoice        Invoice?       @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  journalEntries JournalEntry[]
+  mileageEntries MileageEntry[]
+
+  @@index([userId, scheduledAt])
+  @@index([userId, status])
+  @@index([clientId])
+  @@index([invoiceId])
+}
+
+// ---------------------------------------------------------------------------
+// Journal — the legally required record of notarial acts.
+//
+// Entries are append-only. There is no update path in the application: once a
+// row is written it is sealed, numbered, and hash-chained to its predecessor.
+// A mistake is corrected the way a paper journal is corrected — by adding a new
+// entry that references the original (amendsEntryId + amendmentReason), never
+// by rewriting history. See src/lib/journal-chain.ts.
+// ---------------------------------------------------------------------------
+
+model JournalEntry {
+  id     String @id @default(cuid())
+  userId String
+
+  // Per-notary sequential number, assigned inside the write transaction.
+  sequenceNumber Int
+  performedAt    DateTime
+
+  actType             String
+  documentType        String
+  documentDate        DateTime?
+  documentDescription String?
+  numberOfSignatures  Int       @default(1)
+
+  signerName         String
+  signerAddressLine1 String?
+  signerCity         String?
+  signerState        String?
+  signerPostalCode   String?
+  signerPhone        String?
+  signerEmail        String?
+
+  // How the signer was identified. This is the field a commissioning authority
+  // audits first, so the supporting detail is captured alongside it.
+  identityMethod          String
+  idType                  String?
+  idIssuer                String?
+  idNumberLast4           String?
+  idIssuedOn              DateTime?
+  idExpiresOn             DateTime?
+  credibleWitnessName     String?
+  credibleWitnessAddress  String?
+  secondCredibleWitnessName String?
+
+  feeChargedCents Int @default(0)
+  travelFeeCents  Int @default(0)
+
+  notarizedRemotely Boolean @default(false)
+  ronPlatform       String?
+
+  thumbprintTaken Boolean @default(false)
+  witnessNames    String?
+  locationCity    String?
+  locationState   String?
+  notes           String?
+
+  signingId String?
+
+  // Tamper-evident chain.
+  previousHash    String?
+  entryHash       String
+  sealedAt        DateTime @default(now())
+  amendsEntryId   String?
+  amendmentReason String?
+
+  createdAt DateTime @default(now())
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signing  Signing?       @relation(fields: [signingId], references: [id], onDelete: SetNull)
+  amends   JournalEntry?  @relation("Amendments", fields: [amendsEntryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  amendedBy JournalEntry[] @relation("Amendments")
+
+  @@unique([userId, sequenceNumber])
+  @@index([userId, performedAt])
+  @@index([userId, signerName])
+  @@index([signingId])
+  @@index([amendsEntryId])
+}
+
+// ---------------------------------------------------------------------------
+// Mileage — deductible travel. Kept separate from Signing so non-signing trips
+// (bank runs, supply pickups, dropoffs) can still be logged.
+// ---------------------------------------------------------------------------
+
+model MileageEntry {
+  id        String  @id @default(cuid())
+  userId    String
+  signingId String?
+
+  date             DateTime
+  miles            Float
+  ratePerMileCents Int
+  purpose          String
+  fromAddress      String?
+  toAddress        String?
+  notes            String?
+
+  createdAt DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signing Signing? @relation(fields: [signingId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@index([signingId])
+}
+
+// ---------------------------------------------------------------------------
+// Billing
+// ---------------------------------------------------------------------------
+
+model Invoice {
+  id       String @id @default(cuid())
+  userId   String
+  clientId String
+
+  number String
+  status String @default("DRAFT")
+
+  issueDate DateTime  @default(now())
+  dueDate   DateTime
+  sentAt    DateTime?
+  paidAt    DateTime?
+
+  subtotalCents   Int @default(0)
+  taxCents        Int @default(0)
+  totalCents      Int @default(0)
+  amountPaidCents Int @default(0)
+
+  notes String?
+  terms String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client    Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  lineItems InvoiceLineItem[]
+  signings  Signing[]
+
+  @@unique([userId, number])
+  @@index([userId, status])
+  @@index([clientId])
+}
+
+model InvoiceLineItem {
+  id        String @id @default(cuid())
+  invoiceId String
+
+  description     String
+  quantity        Float  @default(1)
+  unitAmountCents Int
+  amountCents     Int
+  sortOrder       Int    @default(0)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model FeeScheduleItem {
+  id     String @id @default(cuid())
+  userId String
+
+  name          String
+  actType       String?
+  amountCents   Int
+  unit          String  @default("PER_SIGNATURE")
+  stateMaxCents Int?
+  notes         String?
+  isActive      Boolean @default(true)
+  sortOrder     Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+}
+
+model CertificateTemplate {
+  id     String  @id @default(cuid())
+  userId String?
+
+  name      String
+  actType   String
+  state     String?
+  body      String
+  isSystem  Boolean @default(false)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([actType])
+}
