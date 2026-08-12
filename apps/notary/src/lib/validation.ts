@@ -18,67 +18,105 @@ import { parseMoneyToCents } from './money';
  * is always one the UI knows how to render.
  */
 
-/** Trim, and treat an empty string as absent. */
-const optionalText = z
-  .string()
-  .trim()
-  .transform((value) => (value === '' ? null : value))
-  .nullable();
+/**
+ * Normalise a missing FormData key to an empty string.
+ *
+ * A browser omits a form control from the submission entirely when it was
+ * never rendered or, for a checkbox, was left unchecked. This app renders
+ * controls conditionally on purpose — Pennsylvania forbids a thumbprint field,
+ * credible-witness inputs appear only for that identification method, the RON
+ * platform only for a remote act — so absent keys are the normal case, not an
+ * error.
+ *
+ * Without this, every conditionally-rendered field failed validation with
+ * "expected string, received undefined", and because those fields have no
+ * visible input the errors had nowhere to render: the form simply did nothing.
+ * In Pennsylvania that made it impossible to record any journal entry at all.
+ */
+const absentAsEmpty = (value: unknown) => (value === undefined || value === null ? '' : value);
+
+/** Trim, and treat an empty or absent value as null. */
+const optionalText = z.preprocess(
+  absentAsEmpty,
+  z
+    .string()
+    .trim()
+    .transform((value) => (value === '' ? null : value)),
+);
 
 const requiredText = (field: string, max = 500) =>
-  z.string().trim().min(1, `${field} is required.`).max(max, `${field} is too long.`);
+  z.preprocess(
+    absentAsEmpty,
+    z.string().trim().min(1, `${field} is required.`).max(max, `${field} is too long.`),
+  );
 
 /** Money arrives as free text ("$15", "15.00"); store integer cents. */
-const moneyCents = z
-  .string()
-  .trim()
-  .transform((value, ctx) => {
+const moneyCents = z.preprocess(
+  absentAsEmpty,
+  z
+    .string()
+    .trim()
+    .transform((value, ctx) => {
     if (value === '') return 0;
     const cents = parseMoneyToCents(value);
     if (cents === null) {
       ctx.addIssue({ code: 'custom', message: 'Enter a valid dollar amount.' });
       return z.NEVER;
     }
-    if (cents < 0) {
-      ctx.addIssue({ code: 'custom', message: 'Amount cannot be negative.' });
-      return z.NEVER;
-    }
-    return cents;
-  });
+      if (cents < 0) {
+        ctx.addIssue({ code: 'custom', message: 'Amount cannot be negative.' });
+        return z.NEVER;
+      }
+      return cents;
+    }),
+);
 
-const optionalDate = z
-  .string()
-  .trim()
-  .transform((value, ctx) => {
-    if (value === '') return null;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      ctx.addIssue({ code: 'custom', message: 'Enter a valid date.' });
-      return z.NEVER;
-    }
-    return date;
-  })
-  .nullable();
+const optionalDate = z.preprocess(
+  absentAsEmpty,
+  z
+    .string()
+    .trim()
+    .transform((value, ctx) => {
+      if (value === '') return null;
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        ctx.addIssue({ code: 'custom', message: 'Enter a valid date.' });
+        return z.NEVER;
+      }
+      return date;
+    }),
+);
 
-const requiredDate = z
-  .string()
-  .trim()
-  .min(1, 'Date is required.')
-  .transform((value, ctx) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      ctx.addIssue({ code: 'custom', message: 'Enter a valid date.' });
-      return z.NEVER;
-    }
-    return date;
-  });
+const requiredDate = z.preprocess(
+  absentAsEmpty,
+  z
+    .string()
+    .trim()
+    .min(1, 'Date is required.')
+    .transform((value, ctx) => {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        ctx.addIssue({ code: 'custom', message: 'Enter a valid date.' });
+        return z.NEVER;
+      }
+      return date;
+    }),
+);
 
-const checkbox = z
-  .union([z.literal('on'), z.literal('true'), z.literal('1'), z.literal(''), z.undefined(), z.null()])
-  .transform((value) => value === 'on' || value === 'true' || value === '1');
+/**
+ * An unchecked checkbox is absent from FormData entirely, so anything that is
+ * not an affirmative value means false.
+ */
+const checkbox = z.preprocess(
+  (value) => value === 'on' || value === 'true' || value === '1',
+  z.boolean(),
+);
 
 const positiveInt = (field: string, max = 1_000_000) =>
-  z.coerce.number().int(`${field} must be a whole number.`).min(0).max(max);
+  z.preprocess(
+    (value) => (value === undefined || value === null || value === '' ? undefined : value),
+    z.coerce.number().int(`${field} must be a whole number.`).min(0).max(max),
+  );
 
 // ---------------------------------------------------------------------------
 // Auth
@@ -132,15 +170,14 @@ export const journalEntrySchema = z
     identityMethod: z.enum(IDENTITY_METHODS),
     idType: optionalText,
     idIssuer: optionalText,
-    idNumberLast4: z
-      .string()
-      .trim()
-      .transform((value) => (value === '' ? null : value))
-      .nullable()
-      .refine(
-        (value) => value === null || /^\d{4}$/.test(value),
-        'Record only the last four digits of the ID number.',
-      ),
+    // Uses optionalText for the same absent-key reason as everything else: the
+    // identification inputs are only rendered when the signer was identified
+    // by document, so this key is missing for personal knowledge and credible
+    // witness.
+    idNumberLast4: optionalText.refine(
+      (value) => value === null || /^\d{4}$/.test(value),
+      'Record only the last four digits of the ID number.',
+    ),
     idIssuedOn: optionalDate,
     idExpiresOn: optionalDate,
     credibleWitnessName: optionalText,

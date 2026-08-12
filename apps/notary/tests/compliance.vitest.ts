@@ -8,6 +8,7 @@ import {
 } from '../src/lib/compliance';
 import { fillTemplate, placeholdersIn, certificateTemplatesFor } from '../src/lib/certificates';
 import { signPayload } from '../src/lib/webhooks';
+import { journalEntrySchema, toFieldErrors } from '../src/lib/validation';
 
 /**
  * State rules run in opposite directions, which is the whole reason this layer
@@ -185,5 +186,117 @@ describe('webhook signing', () => {
 
   it('produces a hex SHA-256 digest', () => {
     expect(signPayload('s', '1', 'b')).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+/**
+ * Regression guard for the silent-failure bug.
+ *
+ * A browser omits a form control from the submission entirely when it was never
+ * rendered, or when a checkbox is unchecked. This app renders controls
+ * conditionally on purpose, so absent keys are normal — and when the schema
+ * demanded them, every conditionally-hidden field failed validation against a
+ * field with no visible input. The form silently did nothing, which in
+ * Pennsylvania meant no journal entry could ever be recorded.
+ */
+describe('journalEntrySchema with fields the browser did not submit', () => {
+  /** Exactly what a PA notary's browser posts: no thumbprint, no witness, no RON. */
+  const pennsylvaniaSubmission = {
+    performedAt: '2026-08-12T11:20',
+    actType: 'ACKNOWLEDGMENT',
+    documentType: 'Affidavit of Residence',
+    documentDate: '',
+    documentDescription: '',
+    numberOfSignatures: '1',
+    signerName: 'Marcus Ellery Vance',
+    signerAddressLine1: '',
+    signerCity: '',
+    signerState: '',
+    signerPostalCode: '',
+    signerPhone: '',
+    signerEmail: '',
+    identityMethod: 'IDENTIFICATION_DOCUMENT',
+    idType: "Driver's license",
+    idIssuer: 'Pennsylvania',
+    idNumberLast4: '7731',
+    idIssuedOn: '',
+    idExpiresOn: '',
+    feeChargedCents: '5.00',
+    travelFeeCents: '',
+    witnessNames: '',
+    locationCity: 'Pittsburgh',
+    locationState: 'PA',
+    notes: '',
+    signingId: '',
+    amendsEntryId: '',
+    amendmentReason: '',
+    // Deliberately absent, because the browser never sends them:
+    //   thumbprintTaken, notarizedRemotely  — unchecked checkboxes
+    //   ronPlatform                          — only rendered for a remote act
+    //   credibleWitnessName, credibleWitnessAddress, secondCredibleWitnessName
+    //                                        — only rendered for that method
+  };
+
+  it('accepts a Pennsylvania submission', () => {
+    const result = journalEntrySchema.safeParse(pennsylvaniaSubmission);
+    expect(
+      result.success ? null : toFieldErrors(result.error),
+      'a PA notary must be able to record an entry',
+    ).toBeNull();
+  });
+
+  it('defaults absent checkboxes to false rather than rejecting', () => {
+    const result = journalEntrySchema.parse(pennsylvaniaSubmission);
+    expect(result.thumbprintTaken).toBe(false);
+    expect(result.notarizedRemotely).toBe(false);
+  });
+
+  it('maps absent optional text to null', () => {
+    const result = journalEntrySchema.parse(pennsylvaniaSubmission);
+    expect(result.credibleWitnessName).toBeNull();
+    expect(result.ronPlatform).toBeNull();
+    expect(result.signingId).toBeNull();
+  });
+
+  it('still parses when every optional key is missing entirely', () => {
+    // The minimum a form could post and still be a valid act.
+    const minimal = {
+      performedAt: '2026-08-12T11:20',
+      actType: 'JURAT',
+      documentType: 'Affidavit',
+      signerName: 'Dana Reyes',
+      identityMethod: 'PERSONAL_KNOWLEDGE',
+      feeChargedCents: '5.00',
+    };
+    const result = journalEntrySchema.safeParse(minimal);
+    expect(result.success ? null : toFieldErrors(result.error)).toBeNull();
+  });
+
+  it('still rejects genuinely missing required fields', () => {
+    // The fix must not turn every absent key into a pass.
+    const result = journalEntrySchema.safeParse({
+      performedAt: '2026-08-12T11:20',
+      actType: 'ACKNOWLEDGMENT',
+      identityMethod: 'PERSONAL_KNOWLEDGE',
+      feeChargedCents: '5.00',
+      // documentType and signerName absent
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const errors = toFieldErrors(result.error);
+      expect(errors.documentType).toBeTruthy();
+      expect(errors.signerName).toBeTruthy();
+    }
+  });
+
+  it('still enforces the credible-witness rule when that method is chosen', () => {
+    const result = journalEntrySchema.safeParse({
+      ...pennsylvaniaSubmission,
+      identityMethod: 'CREDIBLE_WITNESS',
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(toFieldErrors(result.error).credibleWitnessName).toBeTruthy();
+    }
   });
 });
