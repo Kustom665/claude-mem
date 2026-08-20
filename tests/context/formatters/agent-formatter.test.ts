@@ -1,4 +1,12 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test';
+import { describe, it, expect, mock, beforeEach, afterAll } from 'bun:test';
+
+// Snapshot the real module namespace BEFORE mock.module mutates the live,
+// process-global registry. bun's mock.module is sticky and mock.restore() does
+// NOT undo it, so we re-register this snapshot in afterAll. The spread must run
+// as an executable statement textually before the mock.module call so it
+// captures the real exports before the registry is clobbered.
+import * as realModeManagerNs from '../../../src/services/domain/ModeManager.js';
+const realModeManager = { ...realModeManagerNs };
 
 mock.module('../../../src/services/domain/ModeManager.js', () => ({
   ModeManager: {
@@ -94,6 +102,10 @@ function createTestConfig(overrides: Partial<ContextConfig> = {}): ContextConfig
 }
 
 describe('AgentFormatter', () => {
+  afterAll(() => {
+    mock.module('../../../src/services/domain/ModeManager.js', () => realModeManager);
+  });
+
   describe('renderAgentHeader', () => {
     it('should produce valid markdown header with project name', () => {
       const result = renderAgentHeader('my-project');
