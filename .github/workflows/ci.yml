@@ -22,10 +22,15 @@ jobs:
         with:
           bun-version: latest
 
-      # The repo intentionally gitignores package-lock.json (.gitignore), so
-      # `cache: 'npm'` and `npm ci` (both require a committed lockfile) cannot
-      # be used here — matches windows.yml / npm-publish.yml, which install the
-      # same way.
+      # package-lock.json is now committed, so this install resolves against a
+      # pinned tree instead of re-resolving every range on every run. That
+      # matters most for the ~25 native tree-sitter grammars, which are built
+      # from source here: an unpinned patch bump used to be able to turn a green
+      # run red with no source change.
+      #
+      # Deliberately still `npm install`, not `npm ci`: windows.yml and
+      # npm-publish.yml install the same way, and switching the publish pipeline
+      # to a strict lockfile install deserves its own change.
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
@@ -62,7 +67,7 @@ jobs:
         with:
           bun-version: latest
 
-      # See note in the build job: no committed root lockfile, so npm install.
+      # See note in the build job: lockfile is committed, install stays npm install.
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
@@ -105,7 +110,7 @@ jobs:
         with:
           bun-version: latest
 
-      # See note in the build job: no committed lockfile, so npm install.
+      # See note in the build job: lockfile is committed, install stays npm install.
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
