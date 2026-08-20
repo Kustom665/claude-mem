@@ -1,0 +1,17 @@
+node_modules/
+dist/
+data/
+uploads/
+*.db
+*.db-wal
+*.db-shm
+*.tsbuildinfo
+.env
+.env.local
+.DS_Store
+*.log
+
+# The repository root ignores package-lock.json because claude-mem uses bun.
+# ScrapMap is a standalone npm workspace, so it keeps its lockfile for
+# reproducible installs. A nested .gitignore overrides the parent rule.
+!package-lock.json
