@@ -1,0 +1,22 @@
+# The repository root ignores package-lock.json; this app needs it committed
+# so Vercel installs a reproducible dependency tree.
+!package-lock.json
+
+/node_modules
+/.next/
+/out/
+/build
+*.tsbuildinfo
+next-env.d.ts
+
+.env
+.env*.local
+.vercel
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+.DS_Store
+*.pem

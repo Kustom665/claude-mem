@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/*
+ * Brand tokens. The dashboard shell sets these inline from
+ * `agencies.primary_color`, so every `bg-brand` / `text-brand-fg` utility
+ * re-themes at runtime without a rebuild. The values here are the fallback
+ * used by signed-out pages.
+ */
+:root {
+  --brand: #4f46e5;
+  --brand-fg: #ffffff;
+  --brand-hover: #443dc5;
+  --brand-active: #3a34a9;
+  --brand-soft: #edecfc;
+  --brand-soft-fg: #2b277e;
+  --brand-ring: #a7a2f1;
+}
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-fg: var(--brand-fg);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-active: var(--brand-active);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-fg: var(--brand-soft-fg);
+  --color-brand-ring: var(--brand-ring);
+}
+
+body {
+  background-color: var(--color-slate-50);
+  color: var(--color-slate-900);
+}
+
+/* Native controls pick up the brand colour too (checkboxes, focus rings). */
+input,
+select,
+textarea {
+  accent-color: var(--brand);
+}
