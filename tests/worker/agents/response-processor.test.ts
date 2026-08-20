@@ -1,5 +1,17 @@
-import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from 'bun:test';
+import { describe, it, expect, mock, beforeEach, afterEach, afterAll, spyOn } from 'bun:test';
 import { logger } from '../../../src/utils/logger.js';
+
+// Snapshot the real module namespaces BEFORE mock.module mutates the live,
+// process-global registry. bun's mock.module is sticky and mock.restore() does
+// NOT undo it, so we re-register these snapshots in afterAll. The spreads must
+// run as executable statements textually before the corresponding mock.module
+// calls so they capture the real exports before the registry is clobbered.
+import * as realModeManagerNs from '../../../src/services/domain/ModeManager.js';
+import * as realWorkerUtilsNs from '../../../src/shared/worker-utils.js';
+import * as realWorkerServiceNs from '../../../src/services/worker-service.js';
+const realModeManager = { ...realModeManagerNs };
+const realWorkerUtils = { ...realWorkerUtilsNs };
+const realWorkerService = { ...realWorkerServiceNs };
 
 mock.module('../../../src/services/worker-service.js', () => ({
   updateCursorContextForProject: () => Promise.resolve(),
@@ -44,6 +56,12 @@ describe('ResponseProcessor', () => {
   let mockDbManager: DatabaseManager;
   let mockSessionManager: SessionManager;
   let mockWorker: WorkerRef;
+
+  afterAll(() => {
+    mock.module('../../../src/services/worker-service.js', () => realWorkerService);
+    mock.module('../../../src/shared/worker-utils.js', () => realWorkerUtils);
+    mock.module('../../../src/services/domain/ModeManager.js', () => realModeManager);
+  });
 
   beforeEach(() => {
     loggerSpies = [
