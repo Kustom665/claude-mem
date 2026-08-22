@@ -11,8 +11,8 @@
 
 import 'dotenv/config';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import bcrypt from 'bcryptjs';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { computeEntryHash } from '../src/lib/journal-chain.js';
 import { defaultCertificateTemplates, defaultFeeSchedule } from '../src/lib/onboarding.js';
@@ -32,9 +32,21 @@ function resolveSqliteUrl(rawUrl: string): string {
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error('DATABASE_URL is not set. Copy .env.example to .env first.');
 
-const prisma = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({ url: resolveSqliteUrl(url) }),
-});
+/**
+ * Pick the driver adapter from the URL scheme, exactly as src/lib/db.ts does,
+ * so the same seed runs against local SQLite and a deployed Postgres.
+ */
+function createAdapter(connectionUrl: string) {
+  const require = createRequire(import.meta.url);
+  if (connectionUrl.startsWith('postgres://') || connectionUrl.startsWith('postgresql://')) {
+    const { PrismaPg } = require('@prisma/adapter-pg');
+    return new PrismaPg({ connectionString: connectionUrl });
+  }
+  const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3');
+  return new PrismaBetterSqlite3({ url: resolveSqliteUrl(connectionUrl) });
+}
+
+const prisma = new PrismaClient({ adapter: createAdapter(url) });
 
 /** Days before now, at a given local hour. */
 function daysAgo(days: number, hour = 10, minute = 0): Date {

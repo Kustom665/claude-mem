@@ -48,7 +48,7 @@ two invoices. Its commission and background check are deliberately close to
 expiry so the dashboard warnings are visible.
 
 ```bash
-npm test          # 64 unit tests
+npm test          # 70 unit tests
 npm run typecheck
 npm run build
 ```
@@ -107,29 +107,48 @@ a function in front of it.
 
 ### Vercel + Postgres
 
-The schema is written to the intersection of SQLite and PostgreSQL — no Prisma
-enums, no scalar lists, integer cents rather than floats — and the driver
-adapter is chosen from the URL scheme at runtime. Switching is one command plus
-a migration:
-
-```bash
-npm run db:use-postgres        # flips the provider, archives SQLite migrations
-npm install @prisma/adapter-pg pg
-# set DATABASE_URL to your postgres:// URL
-npx prisma migrate dev -n init
-```
-
-Then deploy:
+PostgreSQL is the committed default, because Vercel's serverless filesystem is
+ephemeral and read-only — SQLite cannot persist there, and `better-sqlite3` is a
+native addon that does not belong in a serverless bundle. `src/lib/db.ts` picks
+its driver adapter from the `DATABASE_URL` scheme at runtime and loads neither
+adapter statically, so only the one you actually use is ever required.
 
 1. Point Vercel at this directory (`apps/notary`) as the project root.
-2. Set environment variables:
+2. Set two environment variables on the project:
    - `DATABASE_URL` — your Postgres connection string
    - `SESSION_SECRET` — generate with
      `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`
-3. Build command `npm run build`, install command `npm install`.
-4. Run `npx prisma migrate deploy` against production once.
+3. Build command `npm run build` (which runs `prisma generate` first), install
+   command `npm install`.
+4. Apply the schema once with `npx prisma migrate deploy`, then optionally
+   `npm run db:seed`.
 
 The app refuses to start in production without a real `SESSION_SECRET`.
+
+**Least privilege.** Do not point `DATABASE_URL` at a superuser. Create a role
+that can read and write its own tables and nothing else, so a leaked connection
+string cannot alter the schema:
+
+```sql
+CREATE ROLE notary_app WITH LOGIN PASSWORD '...';
+GRANT CONNECT ON DATABASE postgres TO notary_app;
+GRANT USAGE ON SCHEMA public TO notary_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO notary_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO notary_app;
+```
+
+### Going back to SQLite for local work
+
+Set `DATABASE_URL="file:./dev.db"`, change the provider in
+`prisma/schema.prisma` back to `sqlite`, and restore the archived migrations
+from `prisma/migrations.sqlite`. The schema itself needs no other change — it is
+written to the intersection of both engines (no Prisma enums, no scalar lists,
+integer cents rather than floats).
+
+Journals survive the move: the hash chain is computed over normalised values
+with dates as ISO strings, so a journal migrated between engines still verifies.
+Move the rows, then open `/journal/verify` to confirm before trusting them.
 
 ### Anywhere else
 

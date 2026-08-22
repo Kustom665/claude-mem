@@ -19,7 +19,7 @@ generator client {
 // prisma.config.ts for migrate/introspect, and reaches the runtime client
 // through a driver adapter — see src/lib/db.ts.
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ---------------------------------------------------------------------------

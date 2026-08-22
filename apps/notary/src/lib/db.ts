@@ -1,7 +1,19 @@
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { PrismaClient } from '@/generated/prisma';
+
+/**
+ * Both driver adapters are loaded lazily, by URL scheme, through
+ * `createRequire`.
+ *
+ * Neither may be imported statically. `@prisma/adapter-better-sqlite3` pulls in
+ * a native `.node` binary, and a static import would drag it into the
+ * serverless bundle of a Postgres deployment that never opens a SQLite file —
+ * where it either bloats the function or fails to load outright. The client is
+ * constructed synchronously, so this is `createRequire` rather than a dynamic
+ * `import()`.
+ */
+type AdapterOptions = ConstructorParameters<typeof PrismaClient>[0];
 
 /**
  * Resolve DATABASE_URL into a path the driver adapter can open.
@@ -19,14 +31,7 @@ function resolveSqliteUrl(rawUrl: string): string {
   return path.resolve(process.cwd(), withoutScheme);
 }
 
-/**
- * Load the PostgreSQL adapter without making it a hard dependency.
- *
- * A SQLite-only deployment should not have to install `pg`, and the client is
- * constructed synchronously, so this uses `createRequire` rather than a dynamic
- * import.
- */
-function loadPostgresAdapter(url: string): ConstructorParameters<typeof PrismaClient>[0] {
+function loadPostgresAdapter(url: string): AdapterOptions {
   const require = createRequire(import.meta.url);
   try {
     const { PrismaPg } = require('@prisma/adapter-pg') as {
@@ -36,7 +41,22 @@ function loadPostgresAdapter(url: string): ConstructorParameters<typeof PrismaCl
   } catch {
     throw new Error(
       'DATABASE_URL points at PostgreSQL but @prisma/adapter-pg is not installed. ' +
-        'Run `npm run db:use-postgres` for the full switch-over steps.',
+        'Run `npm install @prisma/adapter-pg pg`.',
+    );
+  }
+}
+
+function loadSqliteAdapter(url: string): AdapterOptions {
+  const require = createRequire(import.meta.url);
+  try {
+    const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3') as {
+      PrismaBetterSqlite3: new (config: { url: string }) => never;
+    };
+    return { adapter: new PrismaBetterSqlite3({ url: resolveSqliteUrl(url) }) } as never;
+  } catch {
+    throw new Error(
+      'DATABASE_URL points at SQLite but @prisma/adapter-better-sqlite3 is not installed. ' +
+        'Run `npm install @prisma/adapter-better-sqlite3`.',
     );
   }
 }
@@ -51,7 +71,7 @@ function createPrismaClient(): PrismaClient {
     return new PrismaClient(loadPostgresAdapter(url));
   }
 
-  return new PrismaClient({ adapter: new PrismaBetterSqlite3({ url: resolveSqliteUrl(url) }) });
+  return new PrismaClient(loadSqliteAdapter(url));
 }
 
 // Next.js dev mode reloads modules on every edit; without the global cache each
