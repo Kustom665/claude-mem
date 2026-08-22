@@ -123,7 +123,15 @@ adapter statically, so only the one you actually use is ever required.
 4. Apply the schema once with `npx prisma migrate deploy`, then optionally
    `npm run db:seed`.
 
-The app refuses to start in production without a real `SESSION_SECRET`.
+Both variables are runtime requirements, not build ones — `npm run build`
+completes with neither of them set, and every route is server-rendered on
+demand, so nothing reaches the database while building. A failed build is
+therefore never a database problem, which is worth knowing before you go
+looking for one.
+
+At runtime the app says plainly what is missing: `db.ts` throws on an absent
+`DATABASE_URL`, and it refuses to serve in production without a real
+`SESSION_SECRET`.
 
 **Least privilege.** Do not point `DATABASE_URL` at a superuser. Create a role
 that can read and write its own tables and nothing else, so a leaked connection
