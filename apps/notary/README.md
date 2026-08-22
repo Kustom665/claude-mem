@@ -48,7 +48,7 @@ two invoices. Its commission and background check are deliberately close to
 expiry so the dashboard warnings are visible.
 
 ```bash
-npm test          # 70 unit tests
+npm test          # 75 unit tests
 npm run typecheck
 npm run build
 ```
@@ -146,9 +146,14 @@ from `prisma/migrations.sqlite`. The schema itself needs no other change — it 
 written to the intersection of both engines (no Prisma enums, no scalar lists,
 integer cents rather than floats).
 
-Journals survive the move: the hash chain is computed over normalised values
-with dates as ISO strings, so a journal migrated between engines still verifies.
-Move the rows, then open `/journal/verify` to confirm before trusting them.
+Journals survive the move. The demo journal in this repo was sealed under
+SQLite, copied into PostgreSQL, and read back; `tests/journal-migration.vitest.ts`
+holds those exact rows, with the digests written at seal time, and asserts they
+still verify — both as Prisma returns them and as bare strings out of a SQL
+dump, which is what an auditor re-checking your journal would actually have.
+Timestamps normalise to UTC regardless of spelling, so a verification does not
+depend on the time zone of the machine running it. Move the rows, then open
+`/journal/verify` to confirm before trusting them.
 
 ### Anywhere else
 

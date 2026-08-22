@@ -126,11 +126,20 @@ function normalizeValue(value: unknown): string {
   throw new Error(`Cannot hash value of type ${typeof value}`);
 }
 
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/;
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/;
 
+/**
+ * The offset is optional because a `timestamp without time zone` column — which
+ * is what Prisma's `DateTime` becomes on PostgreSQL — dumps as a bare
+ * `2026-07-22T17:45:00` with no zone marker at all. Both SQLite and
+ * node-postgres read such a column as UTC, so an absent offset is read as UTC
+ * here too rather than falling back to the local zone, which would make a
+ * digest depend on the verifying machine's TZ.
+ */
 function parseIsoDate(value: string): Date | null {
   if (!ISO_DATE_RE.test(value)) return null;
-  const parsed = new Date(value);
+  const hasZone = /(Z|[+-]\d{2}:?\d{2})$/.test(value);
+  const parsed = new Date(hasZone ? value : `${value.replace(' ', 'T')}Z`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
