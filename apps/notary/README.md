@@ -138,6 +138,54 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO notary_app;
 ```
 
+### On Supabase, close the REST API first
+
+Two Supabase defaults will bite, and the first one is serious.
+
+**The tables are on a public REST API until you take them off.** Supabase
+grants `anon` and `authenticated` privileges on everything in the `public`
+schema and serves that schema through PostgREST. The key that authenticates
+`anon` is meant to be shipped to browsers. Applying this schema and stopping
+there leaves the journal readable *and writable* by anyone who has that key —
+signer addresses, ID last-4s, and the competency notes a notary writes at a
+bedside, plus the ability to insert journal rows that were never notarised.
+
+This app never uses PostgREST; it talks to Postgres directly. So revoke the
+API roles outright rather than trying to write policies for them:
+
+```sql
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon, authenticated;
+REVOKE ALL ON SCHEMA public FROM anon, authenticated;
+
+-- and stop them coming back on the next migration
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE ALL ON TABLES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE ALL ON SEQUENCES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE ALL ON FUNCTIONS FROM anon, authenticated;
+```
+
+Confirm it took — `Security Advisor` in the dashboard should be empty, and this
+should report `false` for every table:
+
+```sql
+SELECT c.relname, has_table_privilege('anon', c.oid, 'SELECT') AS anon_can_read
+FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relkind = 'r' ORDER BY 1;
+```
+
+**Use the pooler, not the direct connection.** `db.<ref>.supabase.co` has no
+A record — it is IPv6-only — and Vercel's function runtime cannot reach it, so
+a direct connection string builds fine and then fails at runtime with a DNS
+error. Take the pooler URI from **Connect** in the Supabase dashboard
+(`...pooler.supabase.com`, which is IPv4). Through the pooler the username
+carries the project ref: `notary_app.<project-ref>`, not `notary_app`. Session
+mode on port 5432 is the safe default; transaction mode on 6543 holds fewer
+connections open but is fussier about prepared statements.
+
 ### Going back to SQLite for local work
 
 Set `DATABASE_URL="file:./dev.db"`, change the provider in
