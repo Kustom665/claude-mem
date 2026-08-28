@@ -31,6 +31,8 @@ export type Feature =
   | "time_tracking"
   | "reports"
   | "profit_and_loss"
+  | "finance_suite"
+  | "ops_log"
   | "ai_job_assistant";
 
 export type Meter = "sms_sent" | "team_seats" | "ai_assist_calls";
@@ -53,6 +55,7 @@ const STARTER_FEATURES = [
   "logo_branding",
   "card_payments",
   "manual_reminders",
+  "ops_log",
 ] as const satisfies readonly Feature[];
 
 const PRO_FEATURES = [
@@ -75,6 +78,7 @@ const PREMIUM_FEATURES = [
   "time_tracking",
   "reports",
   "profit_and_loss",
+  "finance_suite",
 ] as const satisfies readonly Feature[];
 
 export const PLANS: Readonly<Record<PlanKey, Plan>> = {

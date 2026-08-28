@@ -31,6 +31,20 @@ export type Permission =
   | "payment:refund"
   | "report:read"
   | "pnl:read"
+  // Finance module — company tax profile, pay runs, accounting.
+  // Handles tax identifiers and compensation, so it is never staff-visible.
+  | "finance:read"
+  | "finance:write"
+  | "tax:read"
+  | "tax:write"
+  | "payroll:read"
+  | "payroll:write"
+  | "payroll:approve"
+  // Operations log — day-to-day custom data entry.
+  | "oplog:read"
+  | "oplog:write"
+  | "oplog:template:manage"
+  | "oplog:delete"
   // Administration
   | "member:invite"
   | "member:role:set"
@@ -73,6 +87,16 @@ const ADMIN: readonly Permission[] = [
   "payment:refund",
   "report:read",
   "pnl:read",
+  "finance:read",
+  "finance:write",
+  "tax:read",
+  "tax:write",
+  "payroll:read",
+  "payroll:write",
+  "payroll:approve",
+  "oplog:read",
+  "oplog:write",
+  "oplog:template:manage",
   "member:invite",
   "settings:write",
   "audit:read",
@@ -87,6 +111,10 @@ export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   owner: [
     ...ADMIN,
     "member:role:set",
+    "billing:manage",
+    // Deleting an operations-log entry destroys an audit record, so it stays
+    // with the owner even though admins may create and edit entries.
+    "oplog:delete",
     "billing:manage",
     "data:purge",
     "diagnostics:run",
