@@ -3,9 +3,9 @@
  * Rebranding the product = editing this file only. Nothing else hardcodes a name.
  */
 export const brand = {
-  name: "TradeDesk",
-  legalName: "TradeDesk",
-  tagline: "Run the whole job — quote to paid — from one place.",
+  name: "Rylee's Hut",
+  legalName: "Rylee's Hut Rapid Community Response Team",
+  tagline: "Rapid community response — dispatched, tracked, and paid from one place.",
   domain: "example.com",
   supportEmail: "support@example.com",
 
