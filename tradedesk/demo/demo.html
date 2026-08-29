@@ -85,7 +85,7 @@ td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabu
       <h1 id="viewTitle">Dashboard</h1>
       <div class="switch">Signed in as
         <select id="roleSel" aria-label="Role">
-          <option value="owner">Rob (Owner)</option>
+          <option value="owner">Alexander Carson (Owner)</option>
           <option value="admin">Dana (Admin)</option>
           <option value="staff">Mike (Staff)</option>
           <option value="customer">Client portal</option>
@@ -145,8 +145,8 @@ const S = {
     {n:"INV-1039",c:"Linden & Sons Bakery",total:61250,st:"paid",due:"—"},
   ],
   payruns:[
-    {p:"Aug 11 – Aug 24",pay:"Aug 29",gross:842500,tax:214800,st:"approved",by:"Rob"},
-    {p:"Jul 28 – Aug 10",pay:"Aug 15",gross:791000,tax:201700,st:"paid",by:"Rob"},
+    {p:"Aug 11 – Aug 24",pay:"Aug 29",gross:842500,tax:214800,st:"approved",by:"Alexander"},
+    {p:"Jul 28 – Aug 10",pay:"Aug 15",gross:791000,tax:201700,st:"paid",by:"Alexander"},
   ],
   oplogTpl:{name:"Daily Site Log",fields:[
     {key:"site",label:"Site",type:"text",required:true},
@@ -157,12 +157,12 @@ const S = {
   ]},
   oplog:[
     {site:"Harborview Bldg C",crew:4,date:"2026-08-28",shift:"AM",safety:"Yes",by:"Dana"},
-    {site:"Cedar Ridge clubhouse",crew:2,date:"2026-08-27",shift:"PM",safety:"Yes",by:"Rob"},
+    {site:"Cedar Ridge clubhouse",crew:2,date:"2026-08-27",shift:"PM",safety:"Yes",by:"Alexander"},
   ],
   audit:[
-    {t:"2026-08-28 14:02",who:"Rob (owner)",a:"payroll.approve",d:"Pay run Aug 11–24 · net $6,277.00"},
+    {t:"2026-08-28 14:02",who:"Alexander (owner)",a:"payroll.approve",d:"Pay run Aug 11–24 · net $6,277.00"},
     {t:"2026-08-28 09:15",who:"Dana (admin)",a:"invoice.send",d:"INV-1042 → Harborview Apartments"},
-    {t:"2026-08-27 16:40",who:"Rob (owner)",a:"tax.update",d:"Filing frequency → quarterly"},
+    {t:"2026-08-27 16:40",who:"Alexander (owner)",a:"tax.update",d:"Filing frequency → quarterly"},
   ],
 };
 
@@ -324,7 +324,7 @@ function wire(){
   c.querySelector("#addC")?.addEventListener("click",()=>{S.customers.unshift({name:"New Customer "+(S.customers.length+1),phone:"(555) 000-0000",jobs:0,owed:0});render();toast("Customer added");});
   c.querySelector("#newInv")?.addEventListener("click",()=>{const n="INV-"+(1043+S.invoices.filter(i=>i.n.startsWith("INV-10")).length-4+3);S.invoices.unshift({n:"INV-1043",c:S.customers[0].name,total:57500,st:"sent",due:"Sep 12"});render();toast("INV-1043 created and sent");});
   c.querySelector("#approve")?.addEventListener("click",()=>toast("Nothing pending approval. Payroll approval is recorded in the audit log."));
-  c.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{S.oplog.splice(+b.dataset.del,1);S.audit.unshift({t:"2026-08-29 now",who:"Rob (owner)",a:"oplog.delete",d:"Entry removed — recorded here permanently"});render();toast("Entry deleted — action recorded in audit log");}));
+  c.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{S.oplog.splice(+b.dataset.del,1);S.audit.unshift({t:"2026-08-29 now",who:"Alexander (owner)",a:"oplog.delete",d:"Entry removed — recorded here permanently"});render();toast("Entry deleted — action recorded in audit log");}));
   c.querySelectorAll("[data-plan]").forEach(b=>b.addEventListener("click",()=>{S.plan=b.dataset.plan;document.getElementById("planSel").value=S.plan;render();toast("Plan switched to "+S.plan);}));
   const f=c.querySelector("#opForm");
   if(f) f.addEventListener("submit",e=>{
@@ -341,7 +341,7 @@ function wire(){
     f.querySelectorAll("input,select").forEach(i=>{i.classList.toggle("bad",!!errs[i.name]);});
     f.querySelectorAll(".err").forEach(s=>s.textContent=errs[s.dataset.e]||"");
     if(Object.keys(errs).length){toast(Object.keys(errs).length+" field(s) need fixing");return;}
-    S.oplog.unshift({site:vals.site,crew:vals.crew?+vals.crew:null,date:vals.date,shift:vals.shift,safety:vals.safety,by:{owner:"Rob",admin:"Dana",staff:"Mike"}[S.role]||"Rob"});
+    S.oplog.unshift({site:vals.site,crew:vals.crew?+vals.crew:null,date:vals.date,shift:vals.shift,safety:vals.safety,by:{owner:"Alexander",admin:"Dana",staff:"Mike"}[S.role]||"Alexander"});
     render();toast("Entry saved");
   });
 }

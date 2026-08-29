@@ -7,7 +7,13 @@ export const brand = {
   legalName: "Rylee's Hut Rapid Community Response Team",
   tagline: "Rapid community response — dispatched, tracked, and paid from one place.",
   domain: "example.com",
-  supportEmail: "support@example.com",
+  supportEmail: "rhps-rapid-cert@protonmail.com",
+
+  owner: {
+    name: "Alexander Carson",
+    email: "rhps-rapid-cert@protonmail.com",
+    card: "https://popl.co/card/3gCOi1eP/1/preview?show",
+  },
 
   // Our twist vs. the incumbents: an AI job assistant baked into every surface.
   differentiator: "AI Job Assistant",
