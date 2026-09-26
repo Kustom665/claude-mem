@@ -1,0 +1,353 @@
+<title>Rylee's Hut Ops</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F6F8F6; --surface:#FFFFFF; --surface2:#EEF2EE; --ink:#1C2620; --ink2:#5A6B60;
+  --line:#DDE5DE; --accent:#0E7A5F; --accent-ink:#FFFFFF; --accent-soft:#E2F0EA;
+  --good:#177245; --warn:#B4690E; --crit:#B3261E; --crit-soft:#FBEAE8;
+  --warn-soft:#F8EEDD; --good-soft:#E3F1E8; --lock:#8A968D;
+  --radius:10px; --sans:'Archivo',system-ui,sans-serif; --mono:'Spline Sans Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141B17; --surface:#1B231E; --surface2:#222C25; --ink:#E7EDE8; --ink2:#94A398;
+    --line:#2C382F; --accent:#3FA98A; --accent-ink:#0D1512; --accent-soft:#20362D;
+    --good:#5CBF8A; --warn:#DBA04C; --crit:#E5786F; --crit-soft:#3A2321;
+    --warn-soft:#37301F; --good-soft:#1E3328; --lock:#5C6A60;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141B17; --surface:#1B231E; --surface2:#222C25; --ink:#E7EDE8; --ink2:#94A398;
+  --line:#2C382F; --accent:#3FA98A; --accent-ink:#0D1512; --accent-soft:#20362D;
+  --good:#5CBF8A; --warn:#DBA04C; --crit:#E5786F; --crit-soft:#3A2321;
+  --warn-soft:#37301F; --good-soft:#1E3328; --lock:#5C6A60;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans)}
+.app{display:flex;min-height:100vh}
+.side{width:218px;flex-shrink:0;border-right:1px solid var(--line);background:var(--surface);padding:18px 12px;display:flex;flex-direction:column;gap:2px}
+.logo{font-weight:700;font-size:17px;padding:4px 10px 14px;letter-spacing:.2px}
+.logo span{color:var(--accent)}
+.nav-btn{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:none;color:var(--ink);
+  padding:8px 10px;border-radius:8px;font:500 14px var(--sans);cursor:pointer}
+.nav-btn:hover{background:var(--surface2)}
+.nav-btn.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.nav-btn.locked{color:var(--lock);cursor:not-allowed}
+.nav-btn .pad{margin-left:auto;font:500 10px var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.nav-sec{font:600 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);padding:14px 10px 4px}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:14px;padding:12px 22px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap}
+.topbar h1{font-size:16px;font-weight:600;margin:0;flex:1}
+.switch{display:flex;align-items:center;gap:6px;font:500 11px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--ink2)}
+select{font:500 13px var(--sans);color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
+.content{padding:22px;max-width:1060px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.card .k{font:500 11px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink2)}
+.card .v{font:600 24px/1.3 var(--sans);font-variant-numeric:tabular-nums}
+.card .sub{font-size:12px;color:var(--ink2)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:18px;overflow:hidden}
+.panel-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.panel-h h2{font-size:14px;font-weight:600;margin:0;flex:1}
+.tblwrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font:600 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);text-align:left;padding:8px 16px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill{display:inline-block;font:600 10.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:99px}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.crit{background:var(--crit-soft);color:var(--crit)}
+.pill.mut{background:var(--surface2);color:var(--ink2)}
+.btn{font:600 13px var(--sans);border:0;border-radius:8px;padding:7px 13px;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:var(--surface2);color:var(--ink)}
+.btn:disabled{background:var(--surface2);color:var(--lock);cursor:not-allowed}
+.gate{border:1px dashed var(--line);border-radius:var(--radius);padding:34px;text-align:center;color:var(--ink2);background:var(--surface)}
+.gate b{color:var(--ink)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;padding:14px 16px}
+.form label{display:flex;flex-direction:column;gap:4px;font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.form input,.form select{font:400 14px var(--sans);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+.form input.bad{border-color:var(--crit)}
+.err{color:var(--crit);font:400 12px var(--sans);text-transform:none;letter-spacing:0}
+.form-foot{grid-column:1/-1;display:flex;gap:10px;align-items:center}
+.note{font-size:12.5px;color:var(--ink2);padding:10px 16px;border-top:1px solid var(--line)}
+.toast{position:fixed;bottom:18px;right:18px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font:500 13px var(--sans);opacity:0;transition:opacity .25s;pointer-events:none;max-width:340px}
+.toast.show{opacity:1}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+@media (max-width:760px){.app{flex-direction:column}.side{width:100%;flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line)}.nav-sec{display:none}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+</style>
+<div class="app">
+  <nav class="side" id="nav"></nav>
+  <div class="main">
+    <div class="topbar">
+      <h1 id="viewTitle">Dashboard</h1>
+      <div class="switch">Signed in as
+        <select id="roleSel" aria-label="Role">
+          <option value="owner">Alexander Carson (Owner)</option>
+          <option value="admin">Dana (Admin)</option>
+          <option value="staff">Mike (Staff)</option>
+          <option value="customer">Client portal</option>
+        </select>
+      </div>
+      <div class="switch">Plan
+        <select id="planSel" aria-label="Plan">
+          <option value="starter">Starter</option>
+          <option value="pro">Pro</option>
+          <option value="premium" selected>Premium</option>
+        </select>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+"use strict";
+// ------- entitlements: ported from src/core/plans.ts + auth.ts -------
+const PLANS = {
+  starter:{features:["invoices","estimates","jobs","crm","ops_log"],seats:1},
+  pro:{features:["invoices","estimates","jobs","crm","ops_log","sms","booking","recurring","ai"],seats:2},
+  premium:{features:["invoices","estimates","jobs","crm","ops_log","sms","booking","recurring","ai","finance_suite","reports","inventory"],seats:10},
+};
+const PLAN_ORDER = ["starter","pro","premium"];
+const ROLE_PERMS = {
+  customer:["invoice:read","estimate:read","job:read"],
+  staff:["crm","jobs","estimates","invoice:read","oplog:read","oplog:write"],
+  admin:["crm","jobs","estimates","invoices","invoice:read","reports","finance","payroll","oplog:read","oplog:write","oplog:template","audit","invoice:read","estimate:read","job:read"],
+};
+ROLE_PERMS.owner = [...ROLE_PERMS.admin,"billing","diagnostics","oplog:delete"];
+const can = (role,perm)=> role==="owner" ? true : ROLE_PERMS[role].includes(perm);
+const hasFeature = (plan,f)=> PLANS[plan].features.includes(f);
+const minPlanFor = f => PLAN_ORDER.find(p=>hasFeature(p,f)) || null;
+
+// ------- demo data (all fictional) -------
+const $ = c => (c/100).toLocaleString("en-US",{style:"currency",currency:"USD"});
+const S = {
+  role:"owner", plan:"premium", view:"dash",
+  customers:[
+    {name:"Harborview Apartments",phone:"(555) 201-8841",jobs:6,owed:184000},
+    {name:"Linden & Sons Bakery",phone:"(555) 340-2210",jobs:2,owed:0},
+    {name:"M. Okafor",phone:"(555) 887-1904",jobs:4,owed:42500},
+    {name:"Cedar Ridge HOA",phone:"(555) 776-3300",jobs:9,owed:96000},
+  ],
+  jobs:[
+    {t:"Panel upgrade — Bldg C",c:"Harborview Apartments",when:"Today 8:00–12:00",who:"Mike",st:"in_progress"},
+    {t:"Walk-in cooler fault",c:"Linden & Sons Bakery",when:"Today 13:30–15:00",who:"Mike",st:"scheduled"},
+    {t:"EV charger install",c:"M. Okafor",when:"Tomorrow 9:00–14:00",who:"Dana",st:"scheduled"},
+    {t:"Common-area lighting audit",c:"Cedar Ridge HOA",when:"Fri 10:00",who:"—",st:"unscheduled"},
+  ],
+  invoices:[
+    {n:"INV-1042",c:"Harborview Apartments",total:184000,st:"sent",due:"Sep 05"},
+    {n:"INV-1041",c:"M. Okafor",total:42500,st:"sent",due:"Sep 01"},
+    {n:"INV-1040",c:"Cedar Ridge HOA",total:96000,st:"sent",due:"Aug 30"},
+    {n:"INV-1039",c:"Linden & Sons Bakery",total:61250,st:"paid",due:"—"},
+  ],
+  payruns:[
+    {p:"Aug 11 – Aug 24",pay:"Aug 29",gross:842500,tax:214800,st:"approved",by:"Alexander"},
+    {p:"Jul 28 – Aug 10",pay:"Aug 15",gross:791000,tax:201700,st:"paid",by:"Alexander"},
+  ],
+  oplogTpl:{name:"Daily Site Log",fields:[
+    {key:"site",label:"Site",type:"text",required:true},
+    {key:"crew",label:"Crew size",type:"number",min:1,max:50},
+    {key:"date",label:"Date",type:"date",required:true},
+    {key:"shift",label:"Shift",type:"select",options:["AM","PM"]},
+    {key:"safety",label:"Safety check passed",type:"select",options:["Yes","No"]},
+  ]},
+  oplog:[
+    {site:"Harborview Bldg C",crew:4,date:"2026-08-28",shift:"AM",safety:"Yes",by:"Dana"},
+    {site:"Cedar Ridge clubhouse",crew:2,date:"2026-08-27",shift:"PM",safety:"Yes",by:"Alexander"},
+  ],
+  audit:[
+    {t:"2026-08-28 14:02",who:"Alexander (owner)",a:"payroll.approve",d:"Pay run Aug 11–24 · net $6,277.00"},
+    {t:"2026-08-28 09:15",who:"Dana (admin)",a:"invoice.send",d:"INV-1042 → Harborview Apartments"},
+    {t:"2026-08-27 16:40",who:"Alexander (owner)",a:"tax.update",d:"Filing frequency → quarterly"},
+  ],
+};
+
+// ------- views -------
+const NAV = [
+  {sec:"Operate"},
+  {id:"dash",label:"Dashboard",perm:null,feat:null},
+  {id:"crm",label:"Customers",perm:"crm",feat:"crm"},
+  {id:"jobs",label:"Schedule & Jobs",perm:"jobs",feat:"jobs"},
+  {id:"inv",label:"Invoices",perm:"invoice:read",feat:"invoices"},
+  {id:"oplog",label:"Operations Log",perm:"oplog:read",feat:"ops_log"},
+  {sec:"Admin only"},
+  {id:"finance",label:"Finance & Tax",perm:"finance",feat:"finance_suite"},
+  {id:"payroll",label:"Pay Runs",perm:"payroll",feat:"finance_suite"},
+  {id:"audit",label:"Audit Log",perm:"audit",feat:null},
+  {sec:"Owner only"},
+  {id:"billing",label:"Plan & Billing",perm:"billing",feat:null},
+];
+const TITLES = {dash:"Dashboard",crm:"Customers",jobs:"Schedule & Jobs",inv:"Invoices",oplog:"Operations Log",finance:"Finance & Tax",payroll:"Pay Runs",audit:"Audit Log",billing:"Plan & Billing"};
+
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2600);}
+
+function renderNav(){
+  const el=document.getElementById("nav");
+  let h=`<div class="logo">Rylee's <span>Hut</span></div>`;
+  for(const item of NAV){
+    if(item.sec){h+=`<div class="nav-sec">${item.sec}</div>`;continue;}
+    const roleOk = !item.perm || can(S.role,item.perm);
+    const planOk = !item.feat || hasFeature(S.plan,item.feat);
+    if(!roleOk) continue; // hidden entirely from roles without the permission
+    const locked = !planOk;
+    h+=`<button class="nav-btn ${S.view===item.id?"active":""} ${locked?"locked":""}" data-v="${item.id}" ${locked?`data-lock="${item.feat}"`:""}>
+      ${item.label}${locked?`<span class="pad">${minPlanFor(item.feat)}</span>`:""}</button>`;
+  }
+  el.innerHTML=h;
+  el.querySelectorAll(".nav-btn").forEach(b=>b.addEventListener("click",()=>{
+    if(b.dataset.lock){toast(`${TITLES[b.dataset.v]} needs the ${minPlanFor(b.dataset.lock)[0].toUpperCase()+minPlanFor(b.dataset.lock).slice(1)} plan. Upgrade in Plan & Billing.`);return;}
+    S.view=b.dataset.v; render();
+  }));
+}
+
+const pill = st=>({in_progress:`<span class="pill warn">in progress</span>`,scheduled:`<span class="pill good">scheduled</span>`,unscheduled:`<span class="pill mut">unscheduled</span>`,sent:`<span class="pill warn">sent</span>`,paid:`<span class="pill good">paid</span>`,approved:`<span class="pill good">approved</span>`}[st]||`<span class="pill mut">${st}</span>`);
+
+function vDash(){
+  const owed=S.invoices.filter(i=>i.st==="sent").reduce((a,i)=>a+i.total,0);
+  if(S.role==="customer"){
+    return `<div class="cards"><div class="card"><div class="k">Your open invoices</div><div class="v">${$(S.invoices[1].total)}</div><div class="sub">INV-1041 · due Sep 01</div></div>
+    <div class="card"><div class="k">Next visit</div><div class="v" style="font-size:17px">Tomorrow 9:00</div><div class="sub">EV charger install</div></div></div>
+    <div class="panel"><div class="panel-h"><h2>Your estimates & invoices</h2></div><div class="tblwrap"><table><tr><th>Number</th><th>Status</th><th class="num">Total</th></tr>
+    <tr><td class="mono">INV-1041</td><td>${pill("sent")}</td><td class="num">${$(42500)}</td></tr>
+    <tr><td class="mono">EST-2214</td><td>${pill("approved")}</td><td class="num">${$(389000)}</td></tr></table></div>
+    <div class="note">Portal accounts see only their own documents — read-only, no CRM, no financials.</div></div>`;
+  }
+  return `<div class="cards">
+    <div class="card"><div class="k">Outstanding</div><div class="v">${$(owed)}</div><div class="sub">${S.invoices.filter(i=>i.st==="sent").length} open invoices</div></div>
+    <div class="card"><div class="k">Jobs today</div><div class="v">2</div><div class="sub">1 in progress</div></div>
+    <div class="card"><div class="k">This month</div><div class="v">${$(1147500)}</div><div class="sub">collected</div></div>
+    ${can(S.role,"payroll")&&hasFeature(S.plan,"finance_suite")?`<div class="card"><div class="k">Next pay run</div><div class="v" style="font-size:17px">Aug 29</div><div class="sub">net ${$(627700)}</div></div>`:""}
+  </div>
+  <div class="panel"><div class="panel-h"><h2>Today</h2></div><div class="tblwrap"><table>
+  <tr><th>Job</th><th>Customer</th><th>When</th><th>Assigned</th><th>Status</th></tr>
+  ${S.jobs.slice(0,2).map(j=>`<tr><td>${j.t}</td><td>${j.c}</td><td class="mono">${j.when}</td><td>${j.who}</td><td>${pill(j.st)}</td></tr>`).join("")}
+  </table></div></div>`;
+}
+function vCrm(){
+  return `<div class="panel"><div class="panel-h"><h2>Customers</h2><button class="btn" id="addC">Add customer</button></div>
+  <div class="tblwrap"><table><tr><th>Name</th><th>Phone</th><th class="num">Jobs</th><th class="num">Owes</th></tr>
+  ${S.customers.map(c=>`<tr><td>${c.name}</td><td class="mono">${c.phone}</td><td class="num">${c.jobs}</td><td class="num">${c.owed? $(c.owed):"—"}</td></tr>`).join("")}
+  </table></div></div>`;
+}
+function vJobs(){
+  return `<div class="panel"><div class="panel-h"><h2>Schedule</h2></div><div class="tblwrap"><table>
+  <tr><th>Job</th><th>Customer</th><th>When</th><th>Assigned</th><th>Status</th></tr>
+  ${S.jobs.map(j=>`<tr><td>${j.t}</td><td>${j.c}</td><td class="mono">${j.when}</td><td>${j.who}</td><td>${pill(j.st)}</td></tr>`).join("")}
+  </table></div><div class="note">Assignment and dispatch need <b>job:assign</b> — admins and up.</div></div>`;
+}
+function vInv(){
+  const writable=can(S.role,"invoices");
+  return `<div class="panel"><div class="panel-h"><h2>Invoices</h2>${writable?`<button class="btn" id="newInv">New invoice</button>`:""}</div>
+  <div class="tblwrap"><table><tr><th>Number</th><th>Customer</th><th class="num">Total</th><th>Status</th><th>Due</th></tr>
+  ${S.invoices.map(i=>`<tr><td class="mono">${i.n}</td><td>${i.c}</td><td class="num">${$(i.total)}</td><td>${pill(i.st)}</td><td class="mono">${i.due}</td></tr>`).join("")}
+  </table></div>${writable?"":`<div class="note">Your role can view invoices. Creating, sending and voiding needs admin.</div>`}</div>`;
+}
+function vOplog(){
+  const f=S.oplogTpl.fields;
+  return `<div class="panel"><div class="panel-h"><h2>New entry — ${S.oplogTpl.name}</h2></div>
+  <form class="form" id="opForm" novalidate>
+    ${f.map(fd=>`<label>${fd.label}${fd.required?" *":""}
+      ${fd.type==="select"?`<select name="${fd.key}"><option value="">—</option>${fd.options.map(o=>`<option>${o}</option>`).join("")}</select>`
+      :`<input name="${fd.key}" type="${fd.type==="number"?"number":fd.type==="date"?"date":"text"}">`}
+      <span class="err" data-e="${fd.key}"></span></label>`).join("")}
+    <div class="form-foot"><button class="btn" type="submit">Save entry</button>
+    <span class="sub" style="font-size:12.5px;color:var(--ink2)">Validated against the template — every bad field reported at once.</span></div>
+  </form></div>
+  <div class="panel"><div class="panel-h"><h2>Recent entries</h2></div><div class="tblwrap"><table>
+  <tr><th>Date</th><th>Site</th><th class="num">Crew</th><th>Shift</th><th>Safety</th><th>By</th>${can(S.role,"oplog:delete")?"<th></th>":""}</tr>
+  ${S.oplog.map((e,i)=>`<tr><td class="mono">${e.date}</td><td>${e.site}</td><td class="num">${e.crew??"—"}</td><td>${e.shift||"—"}</td>
+   <td>${e.safety==="No"?`<span class="pill crit">No</span>`:`<span class="pill good">Yes</span>`}</td><td>${e.by}</td>
+   ${can(S.role,"oplog:delete")?`<td><button class="btn ghost" data-del="${i}" style="padding:3px 9px;font-size:12px">Delete</button></td>`:""}</tr>`).join("")}
+  </table></div><div class="note">Corrections supersede, they never overwrite. Delete is <b>owner-only</b> — it destroys an audit record.</div></div>`;
+}
+function vFinance(){
+  return `<div class="cards">
+    <div class="card"><div class="k">Entity</div><div class="v" style="font-size:17px">Rylee's Hut RCRT LLC</div><div class="sub">LLC · quarterly filer</div></div>
+    <div class="card"><div class="k">EIN</div><div class="v mono" style="font-size:17px">••-•••4327</div><div class="sub">stored encrypted · last 4 shown</div></div>
+    <div class="card"><div class="k">Sales tax</div><div class="v">6.25%</div><div class="sub">applied on parts</div></div>
+    <div class="card"><div class="k">Q3 estimate due</div><div class="v" style="font-size:17px">Sep 15</div><div class="sub">${$(412600)} set aside</div></div>
+  </div>
+  <div class="panel"><div class="panel-h"><h2>Profit & loss — August</h2></div><div class="tblwrap"><table>
+    <tr><th></th><th class="num">Amount</th></tr>
+    <tr><td>Revenue collected</td><td class="num">${$(1147500)}</td></tr>
+    <tr><td>Materials & suppliers</td><td class="num">−${$(286300)}</td></tr>
+    <tr><td>Payroll (gross)</td><td class="num">−${$(842500)}</td></tr>
+    <tr><td><b>Net</b></td><td class="num"><b>${$(18700)}</b></td></tr>
+  </table></div><div class="note">Full tax ID never appears in screens or logs; it decrypts only at filing time.</div></div>`;
+}
+function vPayroll(){
+  return `<div class="panel"><div class="panel-h"><h2>Pay runs</h2>${S.role==="owner"?`<button class="btn" id="approve">Approve pending</button>`:""}</div>
+  <div class="tblwrap"><table><tr><th>Period</th><th>Pay date</th><th class="num">Gross</th><th class="num">Tax</th><th class="num">Net</th><th>Status</th><th>Approved by</th></tr>
+  ${S.payruns.map(r=>`<tr><td class="mono">${r.p}</td><td class="mono">${r.pay}</td><td class="num">${$(r.gross)}</td><td class="num">${$(r.tax)}</td><td class="num">${$(r.gross-r.tax)}</td><td>${pill(r.st)}</td><td>${r.by}</td></tr>`).join("")}
+  </table></div><div class="note">Net always equals gross − tax, reconciled per line and per run. Rounding happens once, at the line.</div></div>`;
+}
+function vAudit(){
+  return `<div class="panel"><div class="panel-h"><h2>Audit log</h2><span class="pill mut">append-only</span></div>
+  <div class="tblwrap"><table><tr><th>When</th><th>Actor</th><th>Action</th><th>Detail</th></tr>
+  ${S.audit.map(a=>`<tr><td class="mono">${a.t}</td><td>${a.who}</td><td class="mono">${a.a}</td><td>${a.d}</td></tr>`).join("")}
+  </table></div><div class="note">Every privileged action lands here. Nothing in this table can be edited or deleted from the app.</div></div>`;
+}
+function vBilling(){
+  const rows=[["Starter","$25 / user / mo","Invoices, estimates, jobs, CRM, ops log"],["Pro","$49 / user / mo","+ 2-way SMS, booking portal, recurring billing, AI assistant"],["Premium","$79 / user / mo","+ Finance & tax, pay runs, reports, inventory"]];
+  return `<div class="panel"><div class="panel-h"><h2>Plan & billing</h2></div><div class="tblwrap"><table>
+  <tr><th>Plan</th><th>Price</th><th>Includes</th><th></th></tr>
+  ${rows.map(r=>{const key=r[0].toLowerCase();return `<tr><td><b>${r[0]}</b>${S.plan===key?` <span class="pill good">current</span>`:""}</td><td class="mono">${r[1]}</td><td>${r[2]}</td>
+  <td>${S.plan===key?"":`<button class="btn ghost" data-plan="${key}">Switch</button>`}</td></tr>`;}).join("")}
+  </table></div><div class="note">Only the owner sees this page. Admins run the business; billing stays with you.</div></div>`;
+}
+
+function gateView(id){
+  const item=NAV.find(n=>n.id===id);
+  if(item.perm && !can(S.role,item.perm))
+    return `<div class="gate"><b>Not available for this role.</b><br>${TITLES[id]} needs a permission your account doesn't have. Ask the owner for access.</div>`;
+  if(item.feat && !hasFeature(S.plan,item.feat)){
+    const p=minPlanFor(item.feat);
+    return `<div class="gate"><b>${TITLES[id]} is a ${p[0].toUpperCase()+p.slice(1)} feature.</b><br>Your current plan (${S.plan}) doesn't include it. <br><br><button class="btn" onclick="S.plan='${p}';document.getElementById('planSel').value='${p}';render();">Upgrade to ${p[0].toUpperCase()+p.slice(1)}</button></div>`;
+  }
+  return null;
+}
+
+function render(){
+  renderNav();
+  document.getElementById("viewTitle").textContent=TITLES[S.view];
+  const gate=gateView(S.view);
+  const views={dash:vDash,crm:vCrm,jobs:vJobs,inv:vInv,oplog:vOplog,finance:vFinance,payroll:vPayroll,audit:vAudit,billing:vBilling};
+  document.getElementById("content").innerHTML = gate || views[S.view]();
+  wire();
+}
+function wire(){
+  const c=document.getElementById("content");
+  c.querySelector("#addC")?.addEventListener("click",()=>{S.customers.unshift({name:"New Customer "+(S.customers.length+1),phone:"(555) 000-0000",jobs:0,owed:0});render();toast("Customer added");});
+  c.querySelector("#newInv")?.addEventListener("click",()=>{const n="INV-"+(1043+S.invoices.filter(i=>i.n.startsWith("INV-10")).length-4+3);S.invoices.unshift({n:"INV-1043",c:S.customers[0].name,total:57500,st:"sent",due:"Sep 12"});render();toast("INV-1043 created and sent");});
+  c.querySelector("#approve")?.addEventListener("click",()=>toast("Nothing pending approval. Payroll approval is recorded in the audit log."));
+  c.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{S.oplog.splice(+b.dataset.del,1);S.audit.unshift({t:"2026-08-29 now",who:"Alexander (owner)",a:"oplog.delete",d:"Entry removed — recorded here permanently"});render();toast("Entry deleted — action recorded in audit log");}));
+  c.querySelectorAll("[data-plan]").forEach(b=>b.addEventListener("click",()=>{S.plan=b.dataset.plan;document.getElementById("planSel").value=S.plan;render();toast("Plan switched to "+S.plan);}));
+  const f=c.querySelector("#opForm");
+  if(f) f.addEventListener("submit",e=>{
+    e.preventDefault();
+    const vals=Object.fromEntries(new FormData(f).entries());
+    let errs={};
+    for(const fd of S.oplogTpl.fields){
+      const v=vals[fd.key];
+      if(!v){ if(fd.required) errs[fd.key]="is required"; continue; }
+      if(fd.type==="number"){const n=+v; if(!isFinite(n))errs[fd.key]="must be a number";
+        else if(fd.min!==undefined&&n<fd.min)errs[fd.key]="must be at least "+fd.min;
+        else if(fd.max!==undefined&&n>fd.max)errs[fd.key]="must be at most "+fd.max;}
+    }
+    f.querySelectorAll("input,select").forEach(i=>{i.classList.toggle("bad",!!errs[i.name]);});
+    f.querySelectorAll(".err").forEach(s=>s.textContent=errs[s.dataset.e]||"");
+    if(Object.keys(errs).length){toast(Object.keys(errs).length+" field(s) need fixing");return;}
+    S.oplog.unshift({site:vals.site,crew:vals.crew?+vals.crew:null,date:vals.date,shift:vals.shift,safety:vals.safety,by:{owner:"Alexander",admin:"Dana",staff:"Mike"}[S.role]||"Alexander"});
+    render();toast("Entry saved");
+  });
+}
+document.getElementById("roleSel").addEventListener("change",e=>{S.role=e.target.value;
+  const first=NAV.find(n=>n.id&&(!n.perm||can(S.role,n.perm))); S.view = (NAV.find(n=>n.id===S.view&&(!n.perm||can(S.role,n.perm)))) ? S.view : first.id;
+  render();});
+document.getElementById("planSel").addEventListener("change",e=>{S.plan=e.target.value;render();});
+render();
+</script>
