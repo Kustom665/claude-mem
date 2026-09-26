@@ -27,6 +27,23 @@ jobs:
           irm bun.sh/install.ps1 | iex
         shell: pwsh
 
+      # The runner ships Visual Studio 2026, which the node-gyp bundled with
+      # npm 10 doesn't recognize, so native modules (tree-sitter grammars) fail
+      # to compile. npm 11 bundles node-gyp 12.4+, which supports VS 2026.
+      # npm 10 ignores npm_config_node_gyp, so the npm upgrade is required.
+      - name: Upgrade npm for a node-gyp that recognizes Visual Studio 2026
+        run: |
+          npm install -g npm@11
+          npm prefix -g | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        shell: pwsh
+
+      - name: Verify npm 11 is active
+        run: |
+          $v = npm --version
+          Write-Output "npm $v"
+          if (-not $v.StartsWith('11.')) { throw "expected npm 11, got $v" }
+        shell: pwsh
+
       - run: npm install --no-audit --no-fund
 
       # Build only — the build-and-sync script also runs marketplace sync + worker
