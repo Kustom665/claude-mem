@@ -194,6 +194,18 @@ carries the project ref: `notary_app.<project-ref>`, not `notary_app`. Session
 mode on port 5432 is the safe default; transaction mode on 6543 holds fewer
 connections open but is fussier about prepared statements.
 
+**Free-tier projects pause themselves.** A Supabase project on the free plan
+goes to sleep after about a week with no traffic — no request, no notice, it
+just stops answering. The next connection attempt hangs until it times out
+rather than failing fast, which reads exactly like a hung deployment rather
+than a sleeping database. Waking it takes one click (**Restore project** in
+the dashboard) or the Supabase MCP's `restore_project`, and it comes back
+with the data intact — this was hit and confirmed harmless mid-review: the
+project paused, was restored, and all 58 demo rows and the revoked `anon`
+grants were still exactly as left. Worth knowing before a demo, a customer
+trial, or any gap longer than a few days: a paused free-tier project is a
+bad first impression, and the fix is a page reload away, not a redeploy.
+
 ### Going back to SQLite for local work
 
 Set `DATABASE_URL="file:./dev.db"`, change the provider in
