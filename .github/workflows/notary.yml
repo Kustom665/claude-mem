@@ -1,0 +1,126 @@
+name: Notary Desk
+
+# The rest of this repository is claude-mem; apps/notary is a self-contained
+# Next.js app with its own dependencies, so it gets its own checks, and only when
+# it (or this file) changes.
+on:
+  pull_request:
+    paths:
+      - 'apps/notary/**'
+      - '.github/workflows/notary.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/notary/**'
+      - '.github/workflows/notary.yml'
+
+defaults:
+  run:
+    working-directory: apps/notary
+
+jobs:
+  checks:
+    name: notary · typecheck · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/notary/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck (also flags unused code)
+        run: npm run typecheck
+
+      # Unit and filesystem tests. Includes the route-tree test that fails when a
+      # linked page is missing from a clean checkout — the way /reports once was.
+      - name: Test
+        run: npm test
+
+      # Deliberately with no environment: nothing reaches the database while
+      # building, so a failure here is never a database problem.
+      - name: Build
+        run: npm run build
+
+  browser:
+    name: notary · browser flows (postgres, server in UTC)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: notary
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      # psql, used by the flows to arrange and to check state
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: notary
+      E2E_ADMIN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/notary
+      # The app itself connects as a role that can read and write its own tables and
+      # nothing else, as the README prescribes for a deployment.
+      APP_DATABASE_URL: postgresql://notary_app:ci-app-password@127.0.0.1:5432/notary
+      SESSION_SECRET: ci-only-session-secret-0123456789abcdefghij
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/notary/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Install psql and the browser
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          npx playwright-core install --with-deps chromium
+
+      - name: Create the app role and migrate
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE notary_app WITH LOGIN PASSWORD 'ci-app-password';
+          GRANT CONNECT ON DATABASE notary TO notary_app;
+          GRANT USAGE ON SCHEMA public TO notary_app;
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public
+            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO notary_app;
+          SQL
+          DATABASE_URL="$E2E_ADMIN_DATABASE_URL" npx prisma migrate deploy
+
+      - name: Build
+        run: npm run build
+
+      - name: Start the app (UTC, as a hosted deployment runs)
+        run: |
+          TZ=UTC DATABASE_URL="$APP_DATABASE_URL" nohup npm start -- -p 3100 > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:3100/sign-in > /dev/null && exit 0
+            sleep 1
+          done
+          echo "The app did not come up:"; cat "$RUNNER_TEMP/server.log"; exit 1
+
+      - name: Browser flows
+        run: npm run e2e
+
+      - name: Server log
+        if: failure()
+        run: cat "$RUNNER_TEMP/server.log"

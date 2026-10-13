@@ -57,10 +57,16 @@ invoices, four pipeline entries and two requests from its public link
 deliberately close to expiry so the dashboard warnings are visible.
 
 ```bash
-npm test          # unit and filesystem tests, about 270
+npm test          # unit and filesystem tests, about 280
 npm run typecheck # also flags unused code; Next 16 has no `next lint`
 npm run build
+npm run e2e       # browser flows against a real Postgres; see e2e/README.md
 ```
+
+`npm run e2e` drives the built app in Chromium with the server in UTC and checks
+what was actually stored — the layer that found the defects the unit tests could
+not see. CI runs it (`.github/workflows/notary.yml`) alongside typecheck, test and
+a no-environment build.
 
 ---
 
