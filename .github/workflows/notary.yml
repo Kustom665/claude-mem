@@ -35,6 +35,12 @@ jobs:
       - name: Install
         run: npm ci
 
+      # The client is generated, not committed (src/generated is gitignored), and
+      # the typecheck needs its types. `npm run build` generates it too, but the
+      # build comes last.
+      - name: Generate the Prisma client
+        run: npx prisma generate
+
       - name: Typecheck (also flags unused code)
         run: npm run typecheck
 
