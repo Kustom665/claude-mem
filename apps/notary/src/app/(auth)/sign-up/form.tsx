@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { ActionForm } from '@/components/action-form';
 import { Button, Field, FormError, Input, Select } from '@/components/ui';
 import { DEFAULT_STATE } from '@/lib/compliance';
 import { US_STATES } from '@/lib/domain';
@@ -21,7 +22,7 @@ export function SignUpForm() {
   const errors = state?.errors ?? {};
 
   return (
-    <form action={formAction} className="space-y-4">
+    <ActionForm action={formAction} className="space-y-4">
       <FormError message={errors._form} />
 
       <Field label="Your name" htmlFor="name" error={errors.name} required>
@@ -66,6 +67,6 @@ export function SignUpForm() {
       </Field>
 
       <SubmitButton />
-    </form>
+    </ActionForm>
   );
 }

@@ -41,6 +41,17 @@ function hashToken(token: string): string {
   return createHmac('sha256', sessionSecret()).update(token).digest('hex');
 }
 
+/**
+ * A key for one specific job, derived from SESSION_SECRET.
+ *
+ * Unrelated features should not share one raw secret: with a derived key, a
+ * value that leaks from the public request form (a signed form token, a hashed
+ * address) cannot be replayed as anything else.
+ */
+export function deriveSecret(purpose: string): string {
+  return createHmac('sha256', sessionSecret()).update(`derive:${purpose}`).digest('hex');
+}
+
 export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, BCRYPT_ROUNDS);
 }

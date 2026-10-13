@@ -4,7 +4,7 @@ import type { ComponentProps, ReactNode } from 'react';
 /**
  * Presentational primitives.
  *
- * All server components — nothing here needs client JS. Interactive behaviour
+ * All server components — nothing here needs client JS. Interactive behavior
  * lives in the handful of components under components/ that opt into 'use
  * client' explicitly.
  */

@@ -134,7 +134,7 @@ export default async function JournalEntryPage({
                 <DescriptionItem term="Document date">
                   {entry.documentDate ? formatDate(entry.documentDate, user.timezone) : '—'}
                 </DescriptionItem>
-                <DescriptionItem term="Signatures notarised">
+                <DescriptionItem term="Signatures notarized">
                   {entry.numberOfSignatures}
                 </DescriptionItem>
                 <DescriptionItem term="Where performed">

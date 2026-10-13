@@ -120,7 +120,7 @@ export default async function VerifyJournalPage() {
           <p>
             What this does <strong>not</strong> prove is that nobody with database access rewrote
             the whole chain. An attacker who can edit rows can also recompute every digest. The
-            defence against that is external: record your head digest somewhere outside this
+            defense against that is external: record your head digest somewhere outside this
             system — email it to yourself monthly, or write it in a paper notebook. A digest held
             elsewhere on a known date turns "internally consistent" into "provably unchanged since
             then".

@@ -2,6 +2,7 @@
 
 import { useActionState, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
+import { ActionForm } from '@/components/action-form';
 import { Button, Checkbox, Field, FormError, Input, Select, Textarea } from '@/components/ui';
 import { ACT_TYPES, ACT_TYPE_LABELS, FEE_UNITS, FEE_UNIT_LABELS } from '@/lib/domain';
 import { createFeeItemAction, type BillingFormState } from '../actions';
@@ -28,7 +29,7 @@ export function FeeForm() {
   const errors = state?.errors ?? {};
 
   return (
-    <form ref={formRef} action={formAction} className="space-y-3">
+    <ActionForm ref={formRef} action={formAction} className="space-y-3">
       <FormError message={errors._form} />
 
       <Field label="Name" htmlFor="name" error={errors.name} required>
@@ -77,6 +78,6 @@ export function FeeForm() {
       <Checkbox name="isActive" label="Active" defaultChecked />
 
       <SubmitButton />
-    </form>
+    </ActionForm>
   );
 }

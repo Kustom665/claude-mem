@@ -17,9 +17,25 @@ import { PrismaClient } from '../src/generated/prisma/client.js';
 import { computeEntryHash } from '../src/lib/journal-chain.js';
 import { defaultCertificateTemplates, defaultFeeSchedule } from '../src/lib/onboarding.js';
 import { irsMileageRateCents } from '../src/lib/compliance.js';
+import {
+  addCalendarDaysInZone,
+  calendarPartsInZone,
+  interpretWallClock,
+  zonedTimeToUtc,
+} from '../src/lib/dates.js';
+import { serializeServicesOffered } from '../src/lib/request-link.js';
+import { serializeRequirementList } from '../src/lib/requirements.js';
+import { workSourceByKey } from '../src/lib/work-sources.js';
 
 const DEMO_EMAIL = 'demo@notarydesk.test';
 const DEMO_PASSWORD = 'notary-demo-2026';
+
+/**
+ * The demo notary's zone. Every date and time below is built in it, so the demo
+ * reads the same whether it is seeded from a laptop in Pittsburgh or a build
+ * server in UTC.
+ */
+const ZONE = 'America/New_York';
 
 /** Matches src/lib/db.ts — relative paths resolve against the project root. */
 function resolveSqliteUrl(rawUrl: string): string {
@@ -48,16 +64,35 @@ function createAdapter(connectionUrl: string) {
 
 const prisma = new PrismaClient({ adapter: createAdapter(url) });
 
-/** Days before now, at a given local hour. */
+/** Days before today, at a wall-clock hour in the notary's zone. */
 function daysAgo(days: number, hour = 10, minute = 0): Date {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  date.setHours(hour, minute, 0, 0);
-  return date;
+  const today = calendarPartsInZone(new Date(), ZONE);
+  // Date.UTC carries a day count that runs past either end of a month.
+  const day = new Date(Date.UTC(today.year, today.month - 1, today.day - days));
+  return zonedTimeToUtc(
+    day.getUTCFullYear(),
+    day.getUTCMonth() + 1,
+    day.getUTCDate(),
+    hour,
+    minute,
+    ZONE,
+  );
 }
 
 function daysAhead(days: number, hour = 10, minute = 0): Date {
   return daysAgo(-days, hour, minute);
+}
+
+/** A calendar date `days` from today: noon in the notary's zone, as the app stores one. */
+function calendarDay(days: number): Date {
+  return addCalendarDaysInZone(new Date(), days, ZONE);
+}
+
+/** A fixed calendar date, stored the way a date typed into the app would be. */
+function fixedDay(isoDate: string): Date {
+  const instant = interpretWallClock(isoDate, ZONE);
+  if (!instant) throw new Error(`Bad seed date: ${isoDate}`);
+  return instant;
 }
 
 async function main() {
@@ -69,14 +104,9 @@ async function main() {
     console.log('  Removed previous demo account.');
   }
 
-  const commissionExpires = new Date();
-  commissionExpires.setDate(commissionExpires.getDate() + 61);
-
-  const eoExpires = new Date();
-  eoExpires.setDate(eoExpires.getDate() + 210);
-
-  const backgroundCheckExpires = new Date();
-  backgroundCheckExpires.setDate(backgroundCheckExpires.getDate() + 24);
+  const commissionExpires = calendarDay(61);
+  const eoExpires = calendarDay(210);
+  const backgroundCheckExpires = calendarDay(24);
 
   const user = await prisma.user.create({
     data: {
@@ -93,7 +123,7 @@ async function main() {
       commissionNumber: 'PA-1194832',
       commissionState: 'PA',
       commissionCounty: 'Allegheny',
-      commissionIssuedOn: new Date('2022-09-15'),
+      commissionIssuedOn: fixedDay('2022-09-15'),
       // Inside the 90-day warning window, so the dashboard alert is visible.
       commissionExpiresOn: commissionExpires,
       sealDescription: 'Round seal — Dana Whitfield, Notary Public, Commonwealth of Pennsylvania',
@@ -105,12 +135,34 @@ async function main() {
       eoCoverageCents: 10_000_000,
       eoExpiresOn: eoExpires,
 
-      timezone: 'America/New_York',
-      mileageRateCents: Math.round(irsMileageRateCents()),
+      timezone: ZONE,
+      mileageRateCents: irsMileageRateCents(new Date(), ZONE),
       invoicePrefix: 'KMN',
       invoiceTermsDays: 30,
       plan: 'trial',
       trialEndsOn: daysAhead(9),
+
+      // A live request link, so /n/keystone-mobile-notary works out of the box.
+      publicSlug: 'keystone-mobile-notary',
+      acceptingRequests: true,
+      publicHeadline: 'Mobile notary and loan signing agent in Allegheny County',
+      publicBio:
+        'I come to you: home, office, hospital or care home. Evenings and weekends by ' +
+        'arrangement. I can notarize signatures, but I cannot give legal advice.',
+      serviceArea: 'Pittsburgh and Allegheny County; Butler, Washington and Westmoreland on request',
+      servicesOffered: serializeServicesOffered([
+        'GENERAL',
+        'LOAN_SIGNING',
+        'ESTATE_PLANNING',
+        'REAL_ESTATE',
+      ]),
+      requestMinNoticeHours: 12,
+      showFeesPublicly: true,
+      showPhonePublicly: false,
+
+      // Two things the app cannot see for itself, so Find Work shows a mix of
+      // ready and not-yet-ready sources.
+      readinessChecklist: serializeRequirementList(['PRINTER_SCANNER', 'W9']),
 
       feeScheduleItems: { createMany: { data: defaultFeeSchedule('PA') } },
       certificateTemplates: { createMany: { data: defaultCertificateTemplates('PA') } },
@@ -353,7 +405,7 @@ async function main() {
       idType: "Driver's license",
       idIssuer: 'Pennsylvania',
       idNumberLast4: '4821',
-      idExpiresOn: new Date('2029-04-11'),
+      idExpiresOn: fixedDay('2029-04-11'),
       feeChargedCents: 500,
       numberOfSignatures: 1,
       locationCity: 'Pittsburgh',
@@ -372,7 +424,7 @@ async function main() {
       idType: "Driver's license",
       idIssuer: 'Pennsylvania',
       idNumberLast4: '9067',
-      idExpiresOn: new Date('2028-11-02'),
+      idExpiresOn: fixedDay('2028-11-02'),
       feeChargedCents: 500,
       locationCity: 'Pittsburgh',
       signingId: signings[0].id,
@@ -422,7 +474,7 @@ async function main() {
       idType: 'US passport',
       idIssuer: 'United States',
       idNumberLast4: '3310',
-      idExpiresOn: new Date('2031-06-30'),
+      idExpiresOn: fixedDay('2031-06-30'),
       feeChargedCents: 500,
       locationCity: 'Coraopolis',
       signingId: signings[1].id,
@@ -601,14 +653,15 @@ async function main() {
   ];
 
   for (const seed of mileageSeeds) {
-    const date = daysAgo(seed.days, 9);
+    // A mileage date is a calendar date, so it sits at noon like one typed in.
+    const date = daysAgo(seed.days, 12);
     await prisma.mileageEntry.create({
       data: {
         userId: user.id,
         signingId: seed.signing.id,
         date,
         miles: seed.miles,
-        ratePerMileCents: Math.round(irsMileageRateCents(date)),
+        ratePerMileCents: irsMileageRateCents(date, ZONE),
         purpose: `Signing — ${seed.signing.title}`,
       },
     });
@@ -617,9 +670,9 @@ async function main() {
   await prisma.mileageEntry.create({
     data: {
       userId: user.id,
-      date: daysAgo(8, 16),
+      date: daysAgo(8, 12),
       miles: 6.2,
-      ratePerMileCents: Math.round(irsMileageRateCents(daysAgo(8))),
+      ratePerMileCents: irsMileageRateCents(daysAgo(8), ZONE),
       purpose: 'Drop docs at FedEx Office',
       fromAddress: '1420 Liberty Avenue, Pittsburgh',
       toAddress: 'FedEx Office, Penn Avenue',
@@ -636,7 +689,7 @@ async function main() {
       number: 'KMN-0001',
       status: 'PAID',
       issueDate: daysAgo(20),
-      dueDate: daysAgo(-10),
+      dueDate: calendarDay(10),
       sentAt: daysAgo(20),
       paidAt: daysAgo(4),
       subtotalCents: 22000,
@@ -680,7 +733,7 @@ async function main() {
       number: 'KMN-0002',
       status: 'SENT',
       issueDate: daysAgo(13),
-      dueDate: daysAhead(32),
+      dueDate: calendarDay(32),
       sentAt: daysAgo(13),
       subtotalCents: 18000,
       totalCents: 18000,
@@ -732,6 +785,119 @@ async function main() {
   });
 
   console.log('  Invoices: 2 (1 paid, 1 outstanding)');
+
+  // Find Work: a pipeline that shows every state a follow-up can be in, so the
+  // overdue, due-soon and scheduled treatments are all visible.
+  const directorySource = (key: string) => {
+    const source = workSourceByKey(key);
+    if (!source) throw new Error(`Seed refers to a work source that does not exist: ${key}`);
+    return source;
+  };
+  const pipelineSeeds = [
+    {
+      key: 'snapdocs',
+      status: 'APPLIED',
+      appliedOn: calendarDay(-9),
+      nextFollowUpOn: calendarDay(-2),
+      notes: 'Applied through the notary page. Profile shows "under review".',
+    },
+    {
+      key: 'google-business-profile',
+      status: 'ONBOARDING',
+      appliedOn: calendarDay(-3),
+      nextFollowUpOn: calendarDay(2),
+      notes: 'Verification postcard is on its way (service-area business, address hidden).',
+    },
+    {
+      key: 'notary-rotary',
+      status: 'APPROVED',
+      appliedOn: calendarDay(-20),
+      approvedOn: calendarDay(-12),
+      nextFollowUpOn: calendarDay(10),
+      notes: 'Free Basic listing is live. Decide on Premier after a month of data.',
+    },
+  ];
+
+  for (const seed of pipelineSeeds) {
+    const source = directorySource(seed.key);
+    await prisma.sourceApplication.create({
+      data: {
+        userId: user.id,
+        sourceKey: source.key,
+        name: source.name,
+        category: source.category,
+        website: source.applyUrl,
+        status: seed.status,
+        appliedOn: seed.appliedOn,
+        approvedOn: 'approvedOn' in seed ? seed.approvedOn : null,
+        nextFollowUpOn: seed.nextFollowUpOn,
+        notes: seed.notes,
+      },
+    });
+  }
+
+  // A prospect the notary found herself: no directory entry behind it.
+  await prisma.sourceApplication.create({
+    data: {
+      userId: user.id,
+      name: 'Bridgeway Title & Settlement',
+      category: 'TITLE_ESCROW',
+      status: 'RESEARCHING',
+      website: 'https://example.com/bridgeway-title',
+      contactName: 'Renee Castellano',
+      contactEmail: 'renee@example.com',
+      notes: 'Met their closer at the Strip District open house. Ask who handles overflow signings.',
+    },
+  });
+
+  console.log(`  Pipeline entries: ${pipelineSeeds.length + 1}`);
+
+  // Two requests from the public link. Phone numbers use the reserved 555-01xx range.
+  const today = calendarPartsInZone(new Date(), ZONE);
+  // The requester's date is a bare calendar day, stored as UTC midnight.
+  const requestedDay = new Date(Date.UTC(today.year, today.month - 1, today.day + 3));
+
+  await prisma.workRequest.createMany({
+    data: [
+      {
+        userId: user.id,
+        status: 'NEW',
+        requesterName: 'Priya Natarajan',
+        requesterPhone: '(412) 555-0171',
+        requesterEmail: 'priya.natarajan@example.com',
+        preferredContact: 'TEXT',
+        service: 'ESTATE_PLANNING',
+        documentSummary: 'Durable power of attorney for my father',
+        signerCount: 2,
+        preferredDate: requestedDay,
+        preferredWindow: 'MORNING',
+        addressLine1: '88 Forbes Avenue',
+        city: 'Pittsburgh',
+        state: 'PA',
+        postalCode: '15219',
+        message: 'My father uses a wheelchair, so ground-floor access please.',
+        createdAt: new Date(Date.now() - 25 * 60_000),
+      },
+      {
+        userId: user.id,
+        status: 'CONTACTED',
+        requesterName: 'Marcus Bell',
+        requesterPhone: '(412) 555-0188',
+        preferredContact: 'PHONE',
+        service: 'GENERAL',
+        documentSummary: 'Affidavit for a name change',
+        signerCount: 1,
+        preferredWindow: 'EVENING',
+        city: 'Bethel Park',
+        state: 'PA',
+        postalCode: '15102',
+        createdAt: new Date(Date.now() - 26 * 60 * 60_000),
+      },
+    ],
+  });
+
+  console.log('  Requests: 2 (1 new, 1 contacted)');
+  console.log(`  Public page: /n/${user.publicSlug}`);
   console.log('');
   console.log('Done. Sign in with:');
   console.log(`  Email:    ${DEMO_EMAIL}`);

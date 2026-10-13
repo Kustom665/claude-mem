@@ -68,7 +68,7 @@ export async function signInAction(_prev: AuthState, formData: FormData): Promis
   const valid = await verifyPassword(password, hash);
 
   if (!user || !valid) {
-    return { errors: { _form: 'That email and password combination is not recognised.' } };
+    return { errors: { _form: 'That email and password combination is not recognized.' } };
   }
 
   const userAgent = (await headers()).get('user-agent') ?? undefined;

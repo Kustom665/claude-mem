@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { ActionForm } from '@/components/action-form';
 import {
   Button,
   Card,
@@ -61,7 +62,7 @@ export function ProfileForm({
   const errors = state?.errors ?? {};
 
   return (
-    <form action={formAction}>
+    <ActionForm action={formAction}>
       <Card>
         <CardHeader title="Business details" description="Appears on your invoices." />
         <CardBody className="grid gap-4 sm:grid-cols-2">
@@ -161,6 +162,6 @@ export function ProfileForm({
           </div>
         </CardBody>
       </Card>
-    </form>
+    </ActionForm>
   );
 }

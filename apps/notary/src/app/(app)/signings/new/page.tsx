@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { requireUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { irsMileageRateCents } from '@/lib/compliance';
-import { toDateTimeInputValue } from '@/lib/dates';
+import { nextWholeHour, toDateTimeInputValue } from '@/lib/dates';
 import { PageHeader } from '@/components/ui';
 import { SigningForm } from '../signing-form';
 import { createSigningAction } from '../actions';
@@ -29,8 +29,7 @@ export default async function NewSigningPage({
 
   // Default to the next round hour, which is almost always closer to the real
   // appointment time than "now".
-  const start = new Date();
-  start.setHours(start.getHours() + 1, 0, 0, 0);
+  const start = nextWholeHour(new Date());
 
   return (
     <>
@@ -43,7 +42,7 @@ export default async function NewSigningPage({
           action={createSigningAction}
           clients={clients}
           submitLabel="Schedule signing"
-          mileageRateCents={irsMileageRateCents()}
+          mileageRateCents={irsMileageRateCents(new Date(), user.timezone)}
           values={{
             scheduledAt: toDateTimeInputValue(start, user.timezone),
             clientId: preselected?.id ?? null,

@@ -4,11 +4,14 @@ import { randomBytes } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { requireUser, destroyAllSessions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { isUniqueViolation } from '@/lib/db-errors';
+import { checkCanPublish, requestPath, serializeServicesOffered } from '@/lib/request-link';
 import { attemptDelivery, WEBHOOK_EVENTS, type WebhookEvent } from '@/lib/webhooks';
 import {
   commissionSchema,
   formDataToObject,
   profileSchema,
+  requestLinkSchema,
   toFieldErrors,
   type FieldErrors,
 } from '@/lib/validation';
@@ -36,7 +39,7 @@ export async function updateCommissionAction(
 ): Promise<SettingsFormState> {
   const user = await requireUser();
 
-  const parsed = commissionSchema.safeParse(formDataToObject(formData));
+  const parsed = commissionSchema.safeParse(formDataToObject(formData, user.timezone));
   if (!parsed.success) return { errors: toFieldErrors(parsed.error) };
 
   const data = parsed.data;
@@ -58,6 +61,78 @@ export async function updateCommissionAction(
 
   revalidatePath('/settings/commission');
   revalidatePath('/dashboard');
+  return { errors: {}, saved: true };
+}
+
+// ---------------------------------------------------------------------------
+// Public request link
+// ---------------------------------------------------------------------------
+
+const SLUG_TAKEN = 'That address is already taken. Try adding your city or a number.';
+
+export async function saveRequestLinkAction(
+  _prev: SettingsFormState,
+  formData: FormData,
+): Promise<SettingsFormState> {
+  const user = await requireUser();
+
+  // Checkboxes that share a name arrive as repeated keys, and formDataToObject
+  // keeps only the last of them, so gather the services here.
+  const raw = formDataToObject(formData);
+  raw.servicesOffered = formData.getAll('servicesOffered').map(String).join(',');
+
+  const parsed = requestLinkSchema.safeParse(raw);
+  if (!parsed.success) return { errors: toFieldErrors(parsed.error) };
+  const data = parsed.data;
+
+  // Only a notary with a commission on file and in date may put a public page up.
+  if (data.acceptingRequests) {
+    const check = checkCanPublish(user);
+    if (!check.ok) return { errors: { acceptingRequests: check.reason } };
+  }
+
+  if (data.showPhonePublicly && !user.phone) {
+    return {
+      errors: {
+        showPhonePublicly: 'Add a business phone number to your profile first, then show it here.',
+      },
+    };
+  }
+
+  if (data.publicSlug) {
+    const taken = await prisma.user.findFirst({
+      where: { publicSlug: data.publicSlug, id: { not: user.id } },
+      select: { id: true },
+    });
+    if (taken) return { errors: { publicSlug: SLUG_TAKEN } };
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        publicSlug: data.publicSlug,
+        acceptingRequests: data.acceptingRequests,
+        publicHeadline: data.publicHeadline,
+        publicBio: data.publicBio,
+        serviceArea: data.serviceArea,
+        servicesOffered: serializeServicesOffered(data.servicesOffered),
+        requestMinNoticeHours: data.requestMinNoticeHours,
+        showFeesPublicly: data.showFeesPublicly,
+        showPhonePublicly: data.showPhonePublicly,
+      },
+    });
+  } catch (error) {
+    // Two people claiming the same address in the same moment: the unique index
+    // decides, and the loser is told rather than shown an error page.
+    if (isUniqueViolation(error)) return { errors: { publicSlug: SLUG_TAKEN } };
+    throw error;
+  }
+
+  revalidatePath('/settings/request-link');
+  revalidatePath('/find-work/requests');
+  if (user.publicSlug) revalidatePath(requestPath(user.publicSlug));
+  if (data.publicSlug) revalidatePath(requestPath(data.publicSlug));
   return { errors: {}, saved: true };
 }
 

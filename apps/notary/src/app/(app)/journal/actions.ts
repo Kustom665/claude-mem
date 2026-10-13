@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { appendJournalEntry } from '@/lib/journal';
+import { endOfDayInZone } from '@/lib/dates';
 import { assessThumbprint, checkFeeAgainstStateMax } from '@/lib/compliance';
 import { dispatchEvent } from '@/lib/webhooks';
 import { formatCents } from '@/lib/money';
@@ -29,7 +30,7 @@ export async function createJournalEntryAction(
 ): Promise<JournalFormState> {
   const user = await requireUser();
 
-  const parsed = journalEntrySchema.safeParse(formDataToObject(formData));
+  const parsed = journalEntrySchema.safeParse(formDataToObject(formData, user.timezone));
   if (!parsed.success) {
     return { errors: toFieldErrors(parsed.error) };
   }
@@ -37,11 +38,16 @@ export async function createJournalEntryAction(
   const input = parsed.data;
   const errors: FieldErrors = {};
 
-  // A notarisation performed on an expired commission is void. Refuse to write
+  // A notarization performed on an expired commission is void. Refuse to write
   // it rather than record an act the notary had no authority to perform.
+  //
+  // The commission is good through the end of its expiry date, not until the
+  // instant the date is stored at — otherwise a notary acting at 3 pm on the
+  // last valid day would be told they had expired that morning.
   if (
     user.commissionExpiresOn &&
-    input.performedAt.getTime() > user.commissionExpiresOn.getTime()
+    input.performedAt.getTime() >
+      endOfDayInZone(user.commissionExpiresOn, user.timezone).getTime()
   ) {
     errors._form =
       'Your commission had expired on the date of this act. A notarial act performed on an ' +

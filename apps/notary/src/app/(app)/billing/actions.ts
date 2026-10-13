@@ -6,7 +6,7 @@ import { requireUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { buildLineItems, nextInvoiceNumber, sumLineItems } from '@/lib/invoicing';
 import { dispatchEvent } from '@/lib/webhooks';
-import { addDays } from '@/lib/dates';
+import { addCalendarDaysInZone } from '@/lib/dates';
 import {
   feeScheduleSchema,
   formDataToObject,
@@ -80,7 +80,11 @@ export async function createInvoiceFromSigningsAction(
           number,
           status: 'DRAFT',
           issueDate,
-          dueDate: addDays(issueDate, client.paymentTermsDays || user.invoiceTermsDays),
+          dueDate: addCalendarDaysInZone(
+            issueDate,
+            client.paymentTermsDays || user.invoiceTermsDays,
+            user.timezone,
+          ),
           subtotalCents,
           totalCents: subtotalCents,
           terms: `Net ${client.paymentTermsDays || user.invoiceTermsDays}`,
@@ -156,7 +160,7 @@ export async function recordPaymentAction(
 ): Promise<BillingFormState> {
   const user = await requireUser();
 
-  const parsed = invoicePaymentSchema.safeParse(formDataToObject(formData));
+  const parsed = invoicePaymentSchema.safeParse(formDataToObject(formData, user.timezone));
   if (!parsed.success) return { errors: toFieldErrors(parsed.error) };
 
   const invoice = await prisma.invoice.findFirst({
@@ -202,7 +206,7 @@ export async function createMileageAction(
 ): Promise<BillingFormState> {
   const user = await requireUser();
 
-  const parsed = mileageSchema.safeParse(formDataToObject(formData));
+  const parsed = mileageSchema.safeParse(formDataToObject(formData, user.timezone));
   if (!parsed.success) return { errors: toFieldErrors(parsed.error) };
 
   const { signingId, ...rest } = parsed.data;

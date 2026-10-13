@@ -8,16 +8,17 @@ import {
   journalRuleFor,
   REFERENCE_CAPTURED_ON,
 } from '@/lib/compliance';
+import { findWorkCounts } from '@/lib/find-work-queries';
 import { formatCents } from '@/lib/money';
 import { splitIncome, summarizeMileage } from '@/lib/tax';
 import {
-  addDays,
+  addCalendarDaysInZone,
   daysUntil,
-  endOfDay,
+  endOfDayInZone,
   expiryUrgency,
   formatDateTime,
-  startOfDay,
-  startOfMonth,
+  startOfDayInZone,
+  startOfMonthInZone,
 } from '@/lib/dates';
 import { OPEN_SIGNING_STATUSES, SIGNING_STATUS_LABELS, labelFor } from '@/lib/domain';
 import {
@@ -48,15 +49,29 @@ type CredentialAlert = {
 export default async function DashboardPage() {
   const user = await requireUser();
   const now = new Date();
-  const monthStart = startOfMonth(now);
+  // "This month" and "the next 14 days" are the notary's calendar, not the
+  // server's: a Pennsylvania evening is already tomorrow in UTC.
+  const zone = user.timezone;
+  const monthStart = startOfMonthInZone(now, zone);
 
-  const [upcoming, monthJournal, monthSignings, monthMileage, journalCount, chain, unpaidTotal] =
-    await Promise.all([
+  const [
+    upcoming,
+    monthJournal,
+    monthSignings,
+    monthMileage,
+    journalCount,
+    chain,
+    unpaidTotal,
+    findWork,
+  ] = await Promise.all([
       prisma.signing.findMany({
         where: {
           userId: user.id,
           status: { in: [...OPEN_SIGNING_STATUSES] },
-          scheduledAt: { gte: startOfDay(now), lte: endOfDay(addDays(now, 14)) },
+          scheduledAt: {
+            gte: startOfDayInZone(now, zone),
+            lte: endOfDayInZone(addCalendarDaysInZone(now, 14, zone), zone),
+          },
         },
         orderBy: { scheduledAt: 'asc' },
         take: 8,
@@ -85,6 +100,7 @@ export default async function DashboardPage() {
         where: { userId: user.id, status: { in: ['SENT', 'PARTIAL'] } },
         _sum: { totalCents: true, amountPaidCents: true },
       }),
+      findWorkCounts(user.id, zone, now),
     ]);
 
   const income = splitIncome(monthJournal, monthSignings);
@@ -134,7 +150,7 @@ export default async function DashboardPage() {
             >
               {alert.days < 0 && alert.label === 'Commission' ? (
                 <>
-                  A notarial act performed on an expired commission is void. Stop notarising until
+                  A notarial act performed on an expired commission is void. Stop notarizing until
                   your commission is renewed and recorded.
                 </>
               ) : (
@@ -143,6 +159,21 @@ export default async function DashboardPage() {
             </Alert>
           ))}
         </div>
+      ) : null}
+
+      {findWork.newRequests > 0 ? (
+        <Alert
+          tone="warning"
+          title={`${findWork.newRequests} new ${findWork.newRequests === 1 ? 'request' : 'requests'} from your request link`}
+          className="mb-5"
+          actions={
+            <LinkButton href="/find-work/requests" variant="secondary">
+              Open requests
+            </LinkButton>
+          }
+        >
+          Someone asked for you. A quick reply is the best advantage you have.
+        </Alert>
       ) : null}
 
       {!chain.ok ? (
@@ -277,6 +308,39 @@ export default async function DashboardPage() {
               <div className="flex flex-wrap gap-2 pt-1">
                 <LinkButton href="/journal">Open journal</LinkButton>
                 <LinkButton href="/journal/verify">Verify chain</LinkButton>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader title="Find work" description="Sources, pipeline and requests" />
+            <CardBody className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-[var(--text-muted)]">New requests</span>
+                {findWork.newRequests > 0 ? (
+                  <Badge tone="warning">{findWork.newRequests} waiting</Badge>
+                ) : (
+                  <Badge>None</Badge>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-[var(--text-muted)]">Follow-ups due</span>
+                {findWork.followUpsDue > 0 ? (
+                  <Badge tone={findWork.followUpsOverdue > 0 ? 'danger' : 'warning'}>
+                    {findWork.followUpsDue}
+                    {findWork.followUpsOverdue > 0 ? ` (${findWork.followUpsOverdue} overdue)` : ''}
+                  </Badge>
+                ) : (
+                  <Badge>None</Badge>
+                )}
+              </div>
+              <p className="text-xs leading-relaxed text-[var(--text-subtle)]">
+                Where notarization work comes from, what each source asks for, and how ready you
+                are to apply.
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <LinkButton href="/find-work">Browse sources</LinkButton>
+                <LinkButton href="/find-work/requests">Requests</LinkButton>
               </div>
             </CardBody>
           </Card>

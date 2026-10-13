@@ -77,7 +77,7 @@ type BillableSigning = {
  *
  * Notarial fees are listed separately from service fees rather than rolled into
  * one number. That is partly for the client's benefit — Pennsylvania requires
- * non-notarial charges to be itemised — and partly for the notary's, because
+ * non-notarial charges to be itemized — and partly for the notary's, because
  * the split is what supports the self-employment tax exemption at year end.
  */
 export function buildLineItems(

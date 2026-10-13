@@ -2,6 +2,7 @@ import { requireUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import type { Prisma } from '@/generated/prisma';
 import { csvResponse, toCsv } from '@/lib/csv';
+import { dateRangeBounds } from '@/lib/date-range';
 import { ACT_TYPE_LABELS, IDENTITY_METHOD_LABELS, labelFor } from '@/lib/domain';
 
 /**
@@ -30,17 +31,12 @@ export async function GET(request: Request): Promise<Response> {
   const act = url.searchParams.get('act');
   if (act) where.actType = act;
 
-  const from = url.searchParams.get('from');
-  const to = url.searchParams.get('to');
-  if (from || to) {
-    where.performedAt = {};
-    if (from) where.performedAt.gte = new Date(from);
-    if (to) {
-      const end = new Date(to);
-      end.setHours(23, 59, 59, 999);
-      where.performedAt.lte = end;
-    }
-  }
+  const range = dateRangeBounds(
+    url.searchParams.get('from'),
+    url.searchParams.get('to'),
+    user.timezone,
+  );
+  if (range) where.performedAt = range;
 
   const entries = await prisma.journalEntry.findMany({
     where,

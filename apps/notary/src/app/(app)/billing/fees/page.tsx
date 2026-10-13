@@ -94,7 +94,7 @@ export default async function FeesPage() {
           <Card>
             <CardHeader
               title="Services"
-              description="Not capped. Subject to self-employment tax, and must be itemised separately."
+              description="Not capped. Subject to self-employment tax, and must be itemized separately."
             />
             {services.length === 0 ? (
               <EmptyState title="No service fees configured" />

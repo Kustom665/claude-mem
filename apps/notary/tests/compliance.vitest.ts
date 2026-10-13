@@ -31,7 +31,7 @@ describe('assessThumbprint', () => {
     }
   });
 
-  it('honours the California statutory exemptions', () => {
+  it('honors the California statutory exemptions', () => {
     // Deeds of reconveyance and trustees' deeds are carved out of §8206.
     for (const doc of ['Deed of Reconveyance', "Trustee's Deed Upon Sale"]) {
       const result = assessThumbprint(doc, null, 'CA');
@@ -199,6 +199,48 @@ describe('webhook signing', () => {
  * field with no visible input. The form silently did nothing, which in
  * Pennsylvania meant no journal entry could ever be recorded.
  */
+describe('journalEntrySchema reports every mistake in one pass', () => {
+  const performedAt = '2026-10-12T18:30:00.000Z';
+
+  it('shows the cross-field problems alongside a missing required field', () => {
+    // The signer's name is missing AND the ID-document rule is unmet AND the
+    // remote notarization has no platform. All three are reported together, so
+    // the notary fixes the entry once rather than three times.
+    const result = journalEntrySchema.safeParse({
+      performedAt,
+      actType: 'ACKNOWLEDGMENT',
+      documentType: 'Deed',
+      signerName: '',
+      identityMethod: 'IDENTIFICATION_DOCUMENT',
+      notarizedRemotely: 'on',
+    });
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    const errors = toFieldErrors(result.error);
+    expect(errors.signerName).toBeDefined();
+    expect(errors.idType).toContain('identification document');
+    expect(errors.ronPlatform).toContain('platform');
+  });
+
+  it('does not throw when the date of the act itself is the invalid field', () => {
+    // The expiry rule compares two dates; with performedAt invalid it must skip
+    // the comparison rather than crash on an undefined value.
+    const result = journalEntrySchema.safeParse({
+      performedAt: 'not a date',
+      actType: 'ACKNOWLEDGMENT',
+      documentType: 'Deed',
+      signerName: 'Dana Example',
+      identityMethod: 'PERSONAL_KNOWLEDGE',
+      idExpiresOn: '2020-01-01T12:00:00.000Z',
+    });
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    const errors = toFieldErrors(result.error);
+    expect(errors.performedAt).toBeDefined();
+    expect(errors.idExpiresOn).toBeUndefined();
+  });
+});
+
 describe('journalEntrySchema with fields the browser did not submit', () => {
   /** Exactly what a PA notary's browser posts: no thumbprint, no witness, no RON. */
   const pennsylvaniaSubmission = {

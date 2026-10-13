@@ -28,7 +28,10 @@ function resolveSqliteUrl(rawUrl: string): string {
   const withoutScheme = rawUrl.replace(/^file:/, '');
   if (withoutScheme === ':memory:') return ':memory:';
   if (path.isAbsolute(withoutScheme)) return withoutScheme;
-  return path.resolve(process.cwd(), withoutScheme);
+  // The bundler cannot know this path is only used for a local SQLite file, and
+  // without the hint it traces the whole project into every route that imports
+  // this module — the server function would ship the source tree with it.
+  return path.resolve(/* turbopackIgnore: true */ process.cwd(), withoutScheme);
 }
 
 function loadPostgresAdapter(url: string): AdapterOptions {

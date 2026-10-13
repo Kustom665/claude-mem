@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import type { Prisma } from '@/generated/prisma';
 import { journalFieldRulesFor } from '@/lib/compliance';
 import { formatCents } from '@/lib/money';
+import { dateRangeBounds } from '@/lib/date-range';
 import { formatDateTime } from '@/lib/dates';
 import { ACT_TYPES, ACT_TYPE_LABELS, labelFor } from '@/lib/domain';
 import {
@@ -58,15 +59,9 @@ export default async function JournalPage({
 
   if (actType) where.actType = actType;
 
-  if (params.from || params.to) {
-    where.performedAt = {};
-    if (params.from) where.performedAt.gte = new Date(params.from);
-    if (params.to) {
-      const to = new Date(params.to);
-      to.setHours(23, 59, 59, 999);
-      where.performedAt.lte = to;
-    }
-  }
+  // The range is the notary's calendar days, not the server's.
+  const range = dateRangeBounds(params.from, params.to, user.timezone);
+  if (range) where.performedAt = range;
 
   const [entries, total, feeTotal] = await Promise.all([
     prisma.journalEntry.findMany({

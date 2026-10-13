@@ -2,6 +2,7 @@
 
 import { useActionState, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
+import { ActionForm } from '@/components/action-form';
 import { Button, Field, FormError, Input, Select, Textarea } from '@/components/ui';
 import { createMileageAction, type BillingFormState } from '../actions';
 
@@ -17,9 +18,12 @@ function SubmitButton() {
 export function MileageForm({
   defaultRateCents,
   signings,
+  today,
 }: {
   defaultRateCents: number;
   signings: Array<{ id: string; label: string }>;
+  /** Today as yyyy-mm-dd on the notary's calendar; the server's would be a day ahead each evening. */
+  today: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction] = useActionState<BillingFormState, FormData>(
@@ -32,10 +36,8 @@ export function MileageForm({
   );
   const errors = state?.errors ?? {};
 
-  const today = new Date().toISOString().slice(0, 10);
-
   return (
-    <form ref={formRef} action={formAction} className="space-y-3">
+    <ActionForm ref={formRef} action={formAction} className="space-y-3">
       <FormError message={errors._form} />
 
       <Field label="Date" htmlFor="date" error={errors.date} required>
@@ -91,6 +93,6 @@ export function MileageForm({
       </Field>
 
       <SubmitButton />
-    </form>
+    </ActionForm>
   );
 }

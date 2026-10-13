@@ -4,6 +4,7 @@ import { cx } from '@/components/ui';
 const TABS = [
   { key: 'profile', href: '/settings', label: 'Profile' },
   { key: 'commission', href: '/settings/commission', label: 'Commission & compliance' },
+  { key: 'request-link', href: '/settings/request-link', label: 'Request link' },
   { key: 'integrations', href: '/settings/integrations', label: 'Integrations' },
 ] as const;
 

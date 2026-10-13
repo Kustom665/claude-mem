@@ -63,7 +63,7 @@ export function defaultFeeSchedule(state: string): Prisma.FeeScheduleItemCreateM
       sortOrder: 50,
     },
     // Non-notarial services. These are SE-taxable and, in Pennsylvania, must be
-    // itemised and agreed before the appointment.
+    // itemized and agreed before the appointment.
     {
       name: 'Loan signing (full package)',
       actType: null,
@@ -137,7 +137,7 @@ export function defaultCertificateTemplates(
 /** Everything a fresh account needs, ready to hand to a nested create. */
 export function onboardingDefaults(state: string) {
   return {
-    mileageRateCents: Math.round(irsMileageRateCents()),
+    mileageRateCents: irsMileageRateCents(),
     feeScheduleItems: { createMany: { data: defaultFeeSchedule(state) } },
     certificateTemplates: { createMany: { data: defaultCertificateTemplates(state) } },
   };

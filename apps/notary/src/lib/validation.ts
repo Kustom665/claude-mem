@@ -2,13 +2,20 @@ import { z } from 'zod';
 import {
   ACT_TYPES,
   CLIENT_TYPES,
+  CONTACT_PREFERENCES,
   FEE_UNITS,
   IDENTITY_METHODS,
   INVOICE_STATUSES,
+  PIPELINE_STATUSES,
+  REQUEST_SERVICES,
   SIGNING_STATUSES,
   SIGNING_TYPES,
+  SOURCE_CATEGORIES,
+  TIME_WINDOWS,
 } from './domain';
+import { interpretWallClock } from './dates';
 import { parseMoneyToCents } from './money';
+import { checkSlug, isRequestService } from './request-link';
 
 /**
  * Input validation.
@@ -42,6 +49,22 @@ const optionalText = z.preprocess(
     .string()
     .trim()
     .transform((value) => (value === '' ? null : value)),
+);
+
+/** An optional email address: trimmed, lower-cased, and refused if it is not one. */
+const optionalEmail = z.preprocess(
+  absentAsEmpty,
+  z
+    .string()
+    .trim()
+    .transform((value, ctx) => {
+      if (value === '') return null;
+      if (value.length > 254 || !z.email().safeParse(value).success) {
+        ctx.addIssue({ code: 'custom', message: 'Enter a valid email address.' });
+        return z.NEVER;
+      }
+      return value.toLowerCase();
+    }),
 );
 
 const requiredText = (field: string, max = 500) =>
@@ -112,6 +135,17 @@ const checkbox = z.preprocess(
   z.boolean(),
 );
 
+/**
+ * Options that make a cross-field rule run even when another field has already
+ * failed.
+ *
+ * By default Zod skips an object's refinements as soon as any field is invalid,
+ * so a form with two mistakes shows the first, and only after it is fixed and
+ * resubmitted the second — a round trip per mistake. Rules that use this must
+ * cope with a field being `undefined`: that is what a failed field looks like.
+ */
+const runAlways = { when: () => true } as const;
+
 const positiveInt = (field: string, max = 1_000_000) =>
   z.preprocess(
     (value) => (value === undefined || value === null || value === '' ? undefined : value),
@@ -165,7 +199,7 @@ export const journalEntrySchema = z
     signerState: optionalText,
     signerPostalCode: optionalText,
     signerPhone: optionalText,
-    signerEmail: optionalText,
+    signerEmail: optionalEmail,
 
     identityMethod: z.enum(IDENTITY_METHODS),
     idType: optionalText,
@@ -199,48 +233,42 @@ export const journalEntrySchema = z
     amendsEntryId: optionalText,
     amendmentReason: optionalText,
   })
-  .superRefine((value, ctx) => {
+  // Cross-field rules. Each runs even if another field failed (see runAlways), so
+  // one submit reports every mistake, and each is written for a field that may
+  // be undefined because it failed.
+  .refine(
     // An ID-based identification is only meaningful if we know what was shown.
-    if (value.identityMethod === 'IDENTIFICATION_DOCUMENT' && !value.idType) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['idType'],
-        message: 'Record which identification document you relied on.',
-      });
-    }
-
-    if (value.identityMethod === 'CREDIBLE_WITNESS' && !value.credibleWitnessName) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['credibleWitnessName'],
-        message: 'Record the name of the credible identifying witness.',
-      });
-    }
-
+    (value) => value.identityMethod !== 'IDENTIFICATION_DOCUMENT' || Boolean(value.idType),
+    { path: ['idType'], message: 'Record which identification document you relied on.', ...runAlways },
+  )
+  .refine(
+    (value) => value.identityMethod !== 'CREDIBLE_WITNESS' || Boolean(value.credibleWitnessName),
+    {
+      path: ['credibleWitnessName'],
+      message: 'Record the name of the credible identifying witness.',
+      ...runAlways,
+    },
+  )
+  .refine(
     // An expired ID cannot establish satisfactory evidence of identity.
-    if (value.idExpiresOn && value.idExpiresOn.getTime() < value.performedAt.getTime()) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['idExpiresOn'],
-        message: 'This identification had expired on the date of the act.',
-      });
-    }
-
-    if (value.notarizedRemotely && !value.ronPlatform) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['ronPlatform'],
-        message: 'Record which platform was used for the remote notarization.',
-      });
-    }
-
-    if (value.amendsEntryId && !value.amendmentReason) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['amendmentReason'],
-        message: 'Explain what this amendment corrects.',
-      });
-    }
+    (value) =>
+      !(value.idExpiresOn instanceof Date && value.performedAt instanceof Date) ||
+      value.idExpiresOn.getTime() >= value.performedAt.getTime(),
+    {
+      path: ['idExpiresOn'],
+      message: 'This identification had expired on the date of the act.',
+      ...runAlways,
+    },
+  )
+  .refine((value) => !value.notarizedRemotely || Boolean(value.ronPlatform), {
+    path: ['ronPlatform'],
+    message: 'Record which platform was used for the remote notarization.',
+    ...runAlways,
+  })
+  .refine((value) => !value.amendsEntryId || Boolean(value.amendmentReason), {
+    path: ['amendmentReason'],
+    message: 'Explain what this amendment corrects.',
+    ...runAlways,
   });
 
 export type JournalEntryInput = z.infer<typeof journalEntrySchema>;
@@ -253,7 +281,7 @@ export const clientSchema = z.object({
   name: requiredText('Client name', 200),
   type: z.enum(CLIENT_TYPES),
   contactName: optionalText,
-  email: optionalText,
+  email: optionalEmail,
   phone: optionalText,
   addressLine1: optionalText,
   addressLine2: optionalText,
@@ -280,7 +308,7 @@ export const signingSchema = z.object({
 
   signerName: optionalText,
   signerPhone: optionalText,
-  signerEmail: optionalText,
+  signerEmail: optionalEmail,
   coSignerName: optionalText,
 
   locationName: optionalText,
@@ -314,7 +342,7 @@ export const signingSchema = z.object({
 
 export const mileageSchema = z.object({
   date: requiredDate,
-  miles: z.coerce.number().min(0.1, 'Enter the distance travelled.').max(10_000),
+  miles: z.coerce.number().min(0.1, 'Enter the distance traveled.').max(10_000),
   ratePerMileCents: z.coerce.number().min(0).max(1000),
   purpose: requiredText('Purpose', 200),
   fromAddress: optionalText,
@@ -403,14 +431,241 @@ export const integrationSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// Finding work
+// ---------------------------------------------------------------------------
+
+/** Optional free text with an upper bound, for fields that end up in a database row. */
+const boundedText = (field: string, max: number) =>
+  optionalText.refine((value) => value === null || value.length <= max, `${field} is too long.`);
+
+/**
+ * An optional web address.
+ *
+ * Only http and https survive. A pipeline entry renders its website as a link, so a
+ * `javascript:` or `data:` URL typed — or pasted from somewhere hostile — into
+ * this field would otherwise become a script link on the notary's own page.
+ */
+const optionalWebUrl = z.preprocess(
+  absentAsEmpty,
+  z
+    .string()
+    .trim()
+    .transform((value, ctx) => {
+      if (value === '') return null;
+      // Be kind to "example.com" typed without a scheme.
+      const candidate = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`;
+      try {
+        const url = new URL(candidate);
+        if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !url.hostname.includes('.')) {
+          throw new Error('unsupported');
+        }
+        return url.toString();
+      } catch {
+        ctx.addIssue({ code: 'custom', message: 'Enter a web address like example.com.' });
+        return z.NEVER;
+      }
+    }),
+);
+
+/** A phone number is "ten to fifteen digits, however they are punctuated". */
+const optionalPhone = z.preprocess(
+  absentAsEmpty,
+  z
+    .string()
+    .trim()
+    .transform((value, ctx) => {
+      if (value === '') return null;
+      const digits = value.replace(/\D/g, '');
+      if (value.length > 40 || digits.length < 10 || digits.length > 15) {
+        ctx.addIssue({ code: 'custom', message: 'Enter a phone number with area code.' });
+        return z.NEVER;
+      }
+      return value;
+    }),
+);
+
+export const sourceApplicationSchema = z.object({
+  name: requiredText('Name', 160),
+  category: z.enum(SOURCE_CATEGORIES),
+  status: z.enum(PIPELINE_STATUSES),
+  website: optionalWebUrl,
+  contactName: boundedText('Contact name', 120),
+  contactEmail: optionalEmail,
+  contactPhone: optionalPhone,
+  appliedOn: optionalDate,
+  lastContactOn: optionalDate,
+  nextFollowUpOn: optionalDate,
+  notes: boundedText('Notes', 4000),
+});
+
+export type SourceApplicationInput = z.infer<typeof sourceApplicationSchema>;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * A request from the public form.
+ *
+ * Deliberately narrow. There is no field for an ID number, a date of birth or a
+ * document upload, and the copy around the form says so: this is a way to ask a
+ * notary to call, not a place to hand over anything sensitive.
+ */
+export const publicRequestSchema = z
+  .object({
+    requesterName: requiredText('Your name', 120),
+    requesterPhone: optionalPhone,
+    requesterEmail: optionalEmail,
+    preferredContact: z.enum(CONTACT_PREFERENCES, { error: 'Choose how to reach you.' }).default('ANY'),
+    service: z.enum(REQUEST_SERVICES, { error: 'Choose what you need.' }),
+    documentSummary: boundedText('The document description', 500),
+    signerCount: z.preprocess(
+      (value) => (value === undefined || value === null || value === '' ? 1 : value),
+      z.coerce.number().int('Enter a whole number of signers.').min(1).max(20),
+    ),
+    preferredDate: optionalDate,
+    preferredWindow: z.enum(TIME_WINDOWS, { error: 'Choose a time of day.' }).default('FLEXIBLE'),
+    addressLine1: boundedText('The address', 200),
+    city: requiredText('City', 80),
+    state: z.string().trim().length(2, 'Select your state.').toUpperCase(),
+    postalCode: z
+      .preprocess(absentAsEmpty, z.string().trim())
+      .pipe(z.string().regex(/^\d{5}(-\d{4})?$/, 'Enter a 5-digit ZIP code.')),
+    message: boundedText('The message', 1000),
+    consent: checkbox,
+  })
+  .refine((value) => Boolean(value.requesterPhone || value.requesterEmail), {
+    path: ['requesterPhone'],
+    message: 'Give a phone number or an email so the notary can reach you.',
+    ...runAlways,
+  })
+  .refine((value) => value.consent === true, {
+    path: ['consent'],
+    message: 'Please confirm you are happy to be contacted about this request.',
+    ...runAlways,
+  })
+  .refine(
+    // The date is a bare calendar day (UTC midnight), so allow for time zones.
+    (value) =>
+      !(value.preferredDate instanceof Date) ||
+      value.preferredDate.getTime() - Date.now() >= -1.5 * MS_PER_DAY,
+    { path: ['preferredDate'], message: 'Choose today or a later date.', ...runAlways },
+  )
+  .refine(
+    (value) =>
+      !(value.preferredDate instanceof Date) ||
+      value.preferredDate.getTime() - Date.now() <= 366 * MS_PER_DAY,
+    { path: ['preferredDate'], message: 'Choose a date within the next year.', ...runAlways },
+  );
+
+export type PublicRequestInput = z.infer<typeof publicRequestSchema>;
+
+/** The notary's public request link settings. */
+export const requestLinkSchema = z
+  .object({
+    publicSlug: z.preprocess(
+      absentAsEmpty,
+      z
+        .string()
+        .trim()
+        .transform((value, ctx) => {
+          if (value === '') return null;
+          const result = checkSlug(value);
+          if (!result.ok) {
+            ctx.addIssue({ code: 'custom', message: result.message });
+            return z.NEVER;
+          }
+          return result.slug;
+        }),
+    ),
+    acceptingRequests: checkbox,
+    publicHeadline: boundedText('The headline', 120),
+    publicBio: boundedText('The introduction', 600),
+    serviceArea: boundedText('The service area', 200),
+    /** Joined by the action from the repeated checkbox values. */
+    servicesOffered: z.preprocess(
+      absentAsEmpty,
+      z
+        .string()
+        .trim()
+        .transform((value) =>
+          value
+            .split(',')
+            .map((part) => part.trim())
+            .filter(isRequestService),
+        ),
+    ),
+    requestMinNoticeHours: positiveInt('Notice', 720).default(24),
+    showFeesPublicly: checkbox,
+    showPhonePublicly: checkbox,
+  })
+  .refine((value) => !value.acceptingRequests || Boolean(value.publicSlug), {
+    path: ['publicSlug'],
+    message: 'Choose the address your link will use before you switch it on.',
+    ...runAlways,
+  })
+  .refine((value) => !value.acceptingRequests || (value.servicesOffered?.length ?? 0) > 0, {
+    path: ['servicesOffered'],
+    message: 'Pick at least one service you are happy to take on.',
+    ...runAlways,
+  });
+
+export type RequestLinkInput = z.infer<typeof requestLinkSchema>;
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** FormData → plain object, so Zod can coerce and report per-field errors. */
-export function formDataToObject(formData: FormData): Record<string, string> {
+/**
+ * Form fields that hold a wall-clock date or time typed by the notary.
+ *
+ * Named explicitly, not detected by shape: a loan number or a free-text note
+ * that happens to look like `2026-10-20` must stay exactly what was typed.
+ */
+const WALL_CLOCK_FIELDS: ReadonlySet<string> = new Set([
+  // Instants, from <input type="datetime-local">
+  'performedAt',
+  'scheduledAt',
+  // Calendar dates, from <input type="date">
+  'documentDate',
+  'idIssuedOn',
+  'idExpiresOn',
+  'docsReturnedAt',
+  'date',
+  'issueDate',
+  'dueDate',
+  'paidAt',
+  'commissionIssuedOn',
+  'commissionExpiresOn',
+  'backgroundCheckExpiresOn',
+  'eoExpiresOn',
+  'bondExpiresOn',
+  'appliedOn',
+  'lastContactOn',
+  'nextFollowUpOn',
+]);
+
+/**
+ * FormData → plain object, so Zod can coerce and report per-field errors.
+ *
+ * Pass the signed-in notary's `timeZone` for any form that carries dates. A
+ * browser's date and datetime-local fields send zone-less wall-clock strings,
+ * and without the notary's zone they are read in the server's — which on a
+ * hosted deployment is UTC, not the notary's clock. Omit it for forms whose
+ * dates are not the notary's (the public request form).
+ */
+export function formDataToObject(
+  formData: FormData,
+  timeZone?: string,
+): Record<string, string> {
   const result: Record<string, string> = {};
   for (const [key, value] of formData.entries()) {
-    if (typeof value === 'string') result[key] = value;
+    if (typeof value !== 'string') continue;
+
+    if (timeZone && WALL_CLOCK_FIELDS.has(key)) {
+      const instant = interpretWallClock(value.trim(), timeZone);
+      result[key] = instant ? instant.toISOString() : value;
+    } else {
+      result[key] = value;
+    }
   }
   return result;
 }

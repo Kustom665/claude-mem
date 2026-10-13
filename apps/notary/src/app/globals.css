@@ -5,7 +5,7 @@
  *
  * This is a record-keeping tool for a regulated activity, so the design leans
  * on the conventions of legal and financial software rather than consumer SaaS:
- * high information density, restrained colour, and colour used only to carry
+ * high information density, restrained color, and color used only to carry
  * meaning (compliance state, money, chain integrity) rather than decoration.
  */
 
@@ -96,7 +96,7 @@ body {
  *
  * The journal and certificate pages are printed and handed to auditors and
  * clients, so print is a first-class output, not an afterthought. Navigation
- * and controls are dropped, colour is flattened, and page breaks are forced
+ * and controls are dropped, color is flattened, and page breaks are forced
  * between records so an entry is never split across two sheets.
  */
 @media print {

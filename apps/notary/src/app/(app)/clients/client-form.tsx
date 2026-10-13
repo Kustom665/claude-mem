@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { ActionForm } from '@/components/action-form';
 import {
   Button,
   Card,
@@ -59,7 +60,7 @@ export function ClientForm({
   const showSaved = saved && state === null;
 
   return (
-    <form action={formAction} className="space-y-4">
+    <ActionForm action={formAction} className="space-y-4">
       <FormError message={errors._form} />
 
       <Card>
@@ -184,6 +185,6 @@ export function ClientForm({
         <SubmitButton label={submitLabel} />
         {showSaved ? <span className="text-sm text-emerald-600">Saved.</span> : null}
       </div>
-    </form>
+    </ActionForm>
   );
 }

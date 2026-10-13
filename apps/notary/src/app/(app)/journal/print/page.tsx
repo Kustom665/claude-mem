@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import type { Prisma } from '@/generated/prisma';
 import { verifyJournal } from '@/lib/journal';
 import { formatCents } from '@/lib/money';
+import { calendarDayOf, dateRangeBounds } from '@/lib/date-range';
 import { formatDate, formatDateTime } from '@/lib/dates';
 import { ACT_TYPE_LABELS, IDENTITY_METHOD_LABELS, labelFor } from '@/lib/domain';
 import { LinkButton } from '@/components/ui';
@@ -27,25 +28,20 @@ export default async function PrintJournalPage({
   const params = await searchParams;
 
   const where: Prisma.JournalEntryWhereInput = { userId: user.id };
-  if (params.from || params.to) {
-    where.performedAt = {};
-    if (params.from) where.performedAt.gte = new Date(params.from);
-    if (params.to) {
-      const end = new Date(params.to);
-      end.setHours(23, 59, 59, 999);
-      where.performedAt.lte = end;
-    }
-  }
+  const range = dateRangeBounds(params.from, params.to, user.timezone);
+  if (range) where.performedAt = range;
 
   const [entries, chain] = await Promise.all([
     prisma.journalEntry.findMany({ where, orderBy: { sequenceNumber: 'asc' } }),
     verifyJournal(user.id),
   ]);
 
+  const fromDay = calendarDayOf(params.from, user.timezone);
+  const toDay = calendarDayOf(params.to, user.timezone);
   const rangeLabel =
-    params.from || params.to
-      ? `${params.from ? formatDate(params.from, user.timezone) : 'the beginning'} to ${
-          params.to ? formatDate(params.to, user.timezone) : 'today'
+    fromDay || toDay
+      ? `${fromDay ? formatDate(fromDay, user.timezone) : 'the beginning'} to ${
+          toDay ? formatDate(toDay, user.timezone) : 'today'
         }`
       : 'complete journal';
 

@@ -92,7 +92,7 @@ export default async function BillingPage() {
         {invoices.length === 0 ? (
           <EmptyState
             title="No invoices yet"
-            description="Pick a client and this pulls in every completed signing you have not billed, itemised the way your state requires."
+            description="Pick a client and this pulls in every completed signing you have not billed, itemized the way your state requires."
             action={
               <LinkButton href="/billing/invoices/new" variant="primary">
                 Create your first invoice

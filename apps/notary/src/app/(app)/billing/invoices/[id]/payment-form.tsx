@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { ActionForm } from '@/components/action-form';
 import { Button, Field, FormError, Input } from '@/components/ui';
 import { centsToInputValue, formatCents } from '@/lib/money';
 import { recordPaymentAction, type BillingFormState } from '../../actions';
@@ -31,7 +32,7 @@ export function PaymentForm({
   const errors = state?.errors ?? {};
 
   return (
-    <form action={formAction} className="space-y-3">
+    <ActionForm action={formAction} className="space-y-3">
       <FormError message={errors._form} />
 
       <Field
@@ -53,6 +54,6 @@ export function PaymentForm({
       </Field>
 
       <SubmitButton />
-    </form>
+    </ActionForm>
   );
 }

@@ -1,3 +1,4 @@
+import { toDateInputValue } from './dates';
 import type { ActType } from './domain';
 
 /**
@@ -152,7 +153,7 @@ export const STATE_JOURNAL_FIELD_RULES: Readonly<Record<string, JournalFieldRule
     publicInspectionRight: true,
     note:
       'Effective 28 March 2026, a Pennsylvania journal may not contain personal identifiers: no ' +
-      'Social Security number, no full driver’s licence or ID number, no date or place of birth, ' +
+      'Social Security number, no full driver’s license or ID number, no date or place of birth, ' +
       'no mother’s maiden name, and no biometrics. Only the last four digits of an ID may be ' +
       'recorded. A notary must also permit any person who asks — orally or in writing — to inspect ' +
       'the journal in the notary’s presence.',
@@ -327,7 +328,7 @@ export const STATE_FEE_REFERENCE: Readonly<Record<string, StateFeeReference>> = 
       'Since 28 March 2026 the ceiling is set by 4 Pa. Code §167.3: a table running from $2 to $5 ' +
       'per act, with $5 the maximum for acknowledgments, oaths, verifications, witnessing ' +
       'signatures and certifying copies. Electronic and remote notaries may add up to $20 per act. ' +
-      'Travel, copies, postage and platform fees are non-notarial charges that must be itemised and ' +
+      'Travel, copies, postage and platform fees are non-notarial charges that must be itemized and ' +
       'agreed in advance.',
     source: 'https://www.pa.gov/agencies/dos/programs/notaries/notary-public-fees',
   },
@@ -422,6 +423,57 @@ export function checkFeeAgainstStateMax(
 }
 
 // ---------------------------------------------------------------------------
+// Advertising
+//
+// A public request page is an advertisement for notarial services, and several
+// states, Pennsylvania among them, require a notary who is not an attorney to
+// say so in it. For Pennsylvania the summaries of 57 Pa.C.S. § 325 and the
+// Department of State's guidance, read on 2026-10-13, say an advertisement must
+// prominently state "I am not an attorney licensed to practice law in this
+// Commonwealth", and the Department's guidance adds that the notary is not
+// allowed to draft legal records, give advice on legal matters (including
+// immigration) or charge a fee for those activities. Misuse of "notario" is a
+// disciplinary ground, and the Department may fine up to $1,000 per violating
+// act. None of that was read at source (no page could be opened), so confirm the
+// exact required wording with the Department of State before relying on it, and
+// edit it here if it differs.
+// ---------------------------------------------------------------------------
+
+export const ADVERTISING_NOTICE_CAPTURED_ON = '2026-10-13';
+
+/** Said on every public page, in every state. */
+export const NON_ATTORNEY_NOTICE =
+  'A notary public cannot give legal advice or tell you which type of notarization your ' +
+  'document needs. If you are unsure, ask the person or office that asked you to sign it, or an attorney.';
+
+/** Pennsylvania's non-attorney statement, shown in addition. */
+export const PA_ADVERTISING_NOTICE =
+  'I am not an attorney licensed to practice law in this Commonwealth, and I am not allowed to ' +
+  'draft legal records, give advice on legal matters (including immigration), or charge a fee ' +
+  'for those activities.';
+
+/**
+ * The Department of State's public search, where anyone can confirm that a
+ * notary holds a current commission. Seen in search results, not opened.
+ */
+export const PA_NOTARY_SEARCH_URL = 'https://www.notaries.pa.gov/pages/notarysearch.aspx';
+
+/** Where a requester can verify a notary's commission, for the states that offer a search. */
+export function commissionVerificationUrlFor(state: string | null | undefined): string | null {
+  return (state ?? '').toUpperCase() === 'PA' ? PA_NOTARY_SEARCH_URL : null;
+}
+
+/**
+ * The statements a public page must carry for a notary commissioned in `state`.
+ * Always at least the general one; Pennsylvania adds its own, first.
+ */
+export function advertisingNoticesFor(state: string | null | undefined): string[] {
+  const notices = [NON_ATTORNEY_NOTICE];
+  if ((state ?? '').toUpperCase() === 'PA') notices.unshift(PA_ADVERTISING_NOTICE);
+  return notices;
+}
+
+// ---------------------------------------------------------------------------
 // IRS standard mileage rates
 // ---------------------------------------------------------------------------
 
@@ -454,8 +506,10 @@ const MILEAGE_RATES: readonly MileageRatePeriod[] = [
  * May be fractional (72.5¢ in the first half of 2026); callers round the final
  * dollar amount, never the rate.
  */
-export function irsMileageRateCents(date: Date = new Date()): number {
-  const iso = date.toISOString().slice(0, 10);
+export function irsMileageRateCents(date: Date = new Date(), timeZone?: string): number {
+  // A rate changes at midnight on the notary's calendar. A 9 pm trip on 30 June in
+  // New York is 1 July in UTC, and must still be valued at the June rate.
+  const iso = timeZone ? toDateInputValue(date, timeZone) : date.toISOString().slice(0, 10);
   for (let i = MILEAGE_RATES.length - 1; i >= 0; i -= 1) {
     const period = MILEAGE_RATES[i];
     if (iso >= period.from && (period.until === null || iso < period.until)) {

@@ -31,7 +31,7 @@ export async function createSigningAction(
 ): Promise<SigningFormState> {
   const user = await requireUser();
 
-  const parsed = signingSchema.safeParse(formDataToObject(formData));
+  const parsed = signingSchema.safeParse(formDataToObject(formData, user.timezone));
   if (!parsed.success) return { errors: toFieldErrors(parsed.error) };
 
   const { clientId, mileageMiles, ...rest } = parsed.data;
@@ -47,7 +47,15 @@ export async function createSigningAction(
   });
 
   if (mileageMiles > 0) {
-    await syncMileageEntry(user.id, signing.id, mileageMiles, rest.scheduledAt, rest.title, user.mileageRateCents);
+    await syncMileageEntry(
+      user.id,
+      signing.id,
+      mileageMiles,
+      rest.scheduledAt,
+      rest.title,
+      user.mileageRateCents,
+      user.timezone,
+    );
   }
 
   await dispatchEvent(user.id, eventForStatus(signing.status) ?? 'signing.scheduled', {
@@ -74,7 +82,7 @@ export async function updateSigningAction(
 ): Promise<SigningFormState> {
   const user = await requireUser();
 
-  const parsed = signingSchema.safeParse(formDataToObject(formData));
+  const parsed = signingSchema.safeParse(formDataToObject(formData, user.timezone));
   if (!parsed.success) return { errors: toFieldErrors(parsed.error) };
 
   const existing = await prisma.signing.findFirst({
@@ -105,6 +113,7 @@ export async function updateSigningAction(
     signing.scheduledAt,
     signing.title,
     user.mileageRateCents,
+    user.timezone,
   );
 
   // Fire only on an actual transition, so re-saving a completed signing does
@@ -166,6 +175,7 @@ async function syncMileageEntry(
   date: Date,
   title: string,
   fallbackRateCents: number,
+  timeZone: string,
 ): Promise<void> {
   const existing = await prisma.mileageEntry.findFirst({
     where: { userId, signingId },
@@ -178,7 +188,7 @@ async function syncMileageEntry(
   }
 
   // Value the trip at the IRS rate in force on the day of travel, not today's.
-  const rate = Math.round(irsMileageRateCents(date) || fallbackRateCents);
+  const rate = irsMileageRateCents(date, timeZone) || fallbackRateCents;
 
   if (existing) {
     await prisma.mileageEntry.update({

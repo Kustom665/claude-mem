@@ -10,6 +10,7 @@ const LINKS = [
   { href: '/journal', label: 'Journal' },
   { href: '/signings', label: 'Signings' },
   { href: '/clients', label: 'Clients' },
+  { href: '/find-work', label: 'Find work' },
   { href: '/billing', label: 'Billing' },
   { href: '/reports', label: 'Reports' },
   { href: '/certificates', label: 'Certificates' },

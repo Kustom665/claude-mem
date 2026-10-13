@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { ActionForm } from '@/components/action-form';
 import { Button, Card, CardHeader, FormError, Table, Td, Th } from '@/components/ui';
 import { formatCents } from '@/lib/money';
 import { createInvoiceFromSigningsAction, type BillingFormState } from '../../actions';
@@ -61,7 +62,7 @@ export function InvoiceBuilder({
     .reduce((sum, signing) => sum + signing.notarialCents + signing.serviceCents, 0);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <ActionForm action={formAction} className="space-y-4">
       <input type="hidden" name="clientId" value={clientId} />
       <FormError message={state?.errors._form} />
 
@@ -141,6 +142,6 @@ export function InvoiceBuilder({
       </Card>
 
       <SubmitButton count={selected.size} total={total} />
-    </form>
+    </ActionForm>
   );
 }

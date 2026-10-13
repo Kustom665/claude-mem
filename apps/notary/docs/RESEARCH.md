@@ -13,7 +13,7 @@ are about to put in marketing copy.
 ## 1. The journal is the product
 
 A notarial journal is the notary's only evidence of what happened if a
-notarisation is later challenged — in a fraud claim, a deposition, or a
+notarization is later challenged — in a fraud claim, a deposition, or a
 commissioning-authority audit. Roughly 42 states either require one or strongly
 recommend it.
 
@@ -62,7 +62,7 @@ State rules on **what may be recorded** run in opposite directions.
 
 Pennsylvania's implementing regulations, **effective 28 March 2026**, bar
 personal identifiers from the journal entirely: no Social Security number, no
-full driver's licence or ID number, no date or place of birth, no mother's
+full driver's license or ID number, no date or place of birth, no mother's
 maiden name, and **no biometrics**. Only the **last four digits** of an ID may
 be recorded.
 
@@ -98,7 +98,7 @@ $3.00/page. Electronic and remote notaries may add **up to $20 per act**
 performed with communication technology.
 
 Anything beyond that table — travel, copies, postage, RON platform fees — must
-be **itemised, disclosed before the appointment, and labelled non-notarial**.
+be **itemized, disclosed before the appointment, and labeled non-notarial**.
 
 Pennsylvania is one of only three states (**PA, MI, NC**) that require a notary
 to disclose fees to the client in advance.
@@ -177,7 +177,7 @@ on oath or affirmation, signature witnessing, and copy certification.
 generic RULONA forms as a fallback for out-of-state work. The UI carries a
 standing disclaimer to verify against the forms the commissioning authority
 publishes, and warns against attaching a loose certificate to a document the
-notary did not personally notarise.
+notary did not personally notarize.
 
 ---
 
@@ -220,7 +220,7 @@ Honest gaps, so nothing here oversells:
   seam; nothing is wired to Stripe and nothing is gated.
 - **E-signature / document storage.** No documents are stored. That is a
   deliberate risk decision: storing signer documents raises the breach blast
-  radius sharply, and the journal is the legally required artefact, not the
+  radius sharply, and the journal is the legally required artifact, not the
   documents.
 - **CRM, SMS, email nurture.** Pushed to GoHighLevel over webhooks. See the
   README.
@@ -234,5 +234,5 @@ Honest gaps, so nothing here oversells:
 When a rule changes, the edit is almost always in `src/lib/compliance.ts`, and
 `REFERENCE_CAPTURED_ON` at the top of that file should be bumped — the date is
 displayed in the UI beside every reference figure, so users can see how fresh
-the data is. `tests/compliance.test.ts` pins the current behaviour; a rule change
+the data is. `tests/compliance.test.ts` pins the current behavior; a rule change
 should change a test.

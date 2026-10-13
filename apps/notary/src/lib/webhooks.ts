@@ -6,7 +6,7 @@ import { prisma } from './db';
 /**
  * Outbound webhooks — the handoff to GoHighLevel.
  *
- * Division of labour: this app owns the notary record of truth (journal, acts,
+ * Division of labor: this app owns the notary record of truth (journal, acts,
  * fees, compliance state) and pushes business events outward. The automation
  * platform owns everything downstream — pipelines, SMS and email nurture,
  * review requests, rebooking campaigns. Nothing in here tries to be a CRM,
@@ -26,6 +26,8 @@ export const WEBHOOK_EVENTS = [
   'invoice.paid',
   'journal.entry_created',
   'compliance.expiring',
+  'request.created',
+  'request.accepted',
 ] as const;
 
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
@@ -39,6 +41,8 @@ export const WEBHOOK_EVENT_LABELS: Record<WebhookEvent, string> = {
   'invoice.paid': 'Invoice paid',
   'journal.entry_created': 'Journal entry recorded',
   'compliance.expiring': 'Credential expiring',
+  'request.created': 'Request received',
+  'request.accepted': 'Request accepted',
 };
 
 /** What each event is useful for once it reaches an automation platform. */
@@ -51,6 +55,8 @@ export const WEBHOOK_EVENT_USES: Record<WebhookEvent, string> = {
   'invoice.paid': 'Stop reminders and fire the thank-you.',
   'journal.entry_created': 'Feed act counts into a reporting dashboard.',
   'compliance.expiring': 'Alert the notary before a commission or E&O policy lapses.',
+  'request.created': 'Text the notary the moment someone asks for them, so a lead is answered in minutes.',
+  'request.accepted': 'Send the requester a confirmation text with the date, time and what to have ready.',
 };
 
 const DELIVERY_TIMEOUT_MS = 10_000;

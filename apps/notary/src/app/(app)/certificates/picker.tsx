@@ -15,7 +15,6 @@ import {
   fillTemplate,
   placeholdersIn,
   type CertificateValues,
-  type Placeholder,
 } from '@/lib/certificates';
 import { ACT_TYPE_LABELS, labelFor } from '@/lib/domain';
 
@@ -131,7 +130,7 @@ export function CertificatePicker({
 
         <p className="no-print mt-3 text-xs leading-relaxed text-[var(--text-subtle)]">
           A loose certificate must be stapled to the document it belongs to, and you must never
-          send one to be attached to a document you did not personally notarise — that is how a
+          send one to be attached to a document you did not personally notarize — that is how a
           notary ends up attached to a fraud they never saw.
         </p>
       </div>

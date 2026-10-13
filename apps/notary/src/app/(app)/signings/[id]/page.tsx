@@ -87,7 +87,7 @@ export default async function SigningPage({ params }: { params: Promise<{ id: st
 
       {signing.status === 'COMPLETED' && signing.journalEntries.length === 0 ? (
         <Alert tone="warning" title="No journal entries for a completed signing" className="mb-5">
-          You marked this signing complete but recorded no notarial acts. If you notarised anything
+          You marked this signing complete but recorded no notarial acts. If you notarized anything
           here, the journal entry is the legally required record — and it is also where the
           self-employment tax exemption on those fees comes from.
         </Alert>
@@ -129,7 +129,7 @@ export default async function SigningPage({ params }: { params: Promise<{ id: st
           {signing.journalEntries.length === 0 ? (
             <EmptyState
               title="No acts recorded yet"
-              description="Each notarised signature is its own journal entry."
+              description="Each notarized signature is its own journal entry."
             />
           ) : (
             <Table>
@@ -210,7 +210,7 @@ export default async function SigningPage({ params }: { params: Promise<{ id: st
           action={updateSigningAction.bind(null, signing.id)}
           clients={clients}
           submitLabel="Save changes"
-          mileageRateCents={irsMileageRateCents(signing.scheduledAt)}
+          mileageRateCents={irsMileageRateCents(signing.scheduledAt, user.timezone)}
           values={{
             ...signing,
             scheduledAt: toDateTimeInputValue(signing.scheduledAt, user.timezone),

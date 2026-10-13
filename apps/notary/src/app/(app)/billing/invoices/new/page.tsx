@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { requireUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { formatCents } from '@/lib/money';
 import { formatDate } from '@/lib/dates';
 import { SIGNING_TYPE_LABELS, labelFor } from '@/lib/domain';
 import {
@@ -126,7 +125,7 @@ export default async function NewInvoicePage({
 
         <Alert tone="neutral">
           Notarial fees and service fees are written as separate lines. Pennsylvania requires
-          non-notarial charges to be itemised, and the split is what supports the self-employment
+          non-notarial charges to be itemized, and the split is what supports the self-employment
           tax exemption at year end — worth keeping even where a state does not compel it.
         </Alert>
       </div>

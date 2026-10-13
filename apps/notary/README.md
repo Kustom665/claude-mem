@@ -23,7 +23,15 @@ Three things distinguish it from the $9/month notary bookkeeping tools:
    split has to be captured per act as the work happens, which is why fees live
    on journal entries and not just on invoices.
 
-Every rule traces to a cited source in [`docs/RESEARCH.md`](docs/RESEARCH.md).
+4. **It helps you find the work, not just record it.** *Find work* is a dated,
+   sourced map of where notarization work comes from and how to get on each
+   source's vendor list, scored against your own commission and insurance, with
+   a pipeline that remembers to follow up. A public *request link* lets people
+   ask for you directly. See [`docs/WORK-SOURCES.md`](docs/WORK-SOURCES.md).
+
+Every rule traces to a cited source in [`docs/RESEARCH.md`](docs/RESEARCH.md);
+what this niche's software is missing, and what to build next, is in
+[`docs/INSIGHTS.md`](docs/INSIGHTS.md).
 
 ---
 
@@ -43,13 +51,14 @@ demo@notarydesk.test  /  notary-demo-2026
 ```
 
 The demo account is a Pennsylvania signing agent with a month of work: 12 chained
-journal entries, 6 signings, 4 clients, mileage across both 2026 IRS rates, and
-two invoices. Its commission and background check are deliberately close to
-expiry so the dashboard warnings are visible.
+journal entries, 6 signings, 4 clients, mileage across both 2026 IRS rates, two
+invoices, four pipeline entries and two requests from its public link
+(`/n/keystone-mobile-notary`). Its commission and background check are
+deliberately close to expiry so the dashboard warnings are visible.
 
 ```bash
-npm test          # 75 unit tests
-npm run typecheck
+npm test          # unit and filesystem tests, about 270
+npm run typecheck # also flags unused code; Next 16 has no `next lint`
 npm run build
 ```
 
@@ -62,10 +71,12 @@ npm run build
 | **Journal** | Sealed, hash-chained entries. Search, chain verification, amendments, CSV export with digests, printable audit copy, and a redacted public-inspection view. |
 | **Signings** | Appointments with a status pipeline, location, loan/escrow detail, fees, and automatic mileage logging. |
 | **Clients** | Title companies, escrow, signing services, law firms, direct clients. Payment terms and revenue per client. |
-| **Billing** | Invoices generated from completed unbilled signings, itemised notarial vs service fees. Mileage log. Editable fee schedule with statutory maximums. |
+| **Billing** | Invoices generated from completed unbilled signings, itemized notarial vs service fees. Mileage log. Editable fee schedule with statutory maximums. |
 | **Reports** | Schedule C and Schedule SE views with the notarial exemption applied, act counts, and mileage bucketed by IRS rate. |
 | **Certificates** | PA RULONA §316 short forms plus generic forms, filled from your commission details and printable. |
 | **Compliance** | Commission, E&O, bond and background-check expiry warnings. State-aware journal field rules. |
+| **Find work** | A dated, sourced directory of 20 work sources (signing services, title and escrow, law firms, care homes, apostille, directories, RON platforms), each with how to join, what it requires, a readiness score from your own credentials, and the caveats where sources disagree. A pipeline with follow-up reminders; "convert to client" when work starts. |
+| **Request link** | A public page at `/n/your-name` where people ask you to call them back. Honeypot, signed form token and database-counted rate limits; no ID numbers or uploads; the Pennsylvania non-attorney statement is printed on it. Requests land in an inbox; accepting one schedules a signing. |
 | **Integrations** | Signed outbound webhooks to GoHighLevel. |
 
 ---
@@ -89,6 +100,8 @@ platform owns pipelines, SMS and email nurture, review requests and rebooking.
 | `invoice.paid` | Invoice settled | Stop reminders, send thanks |
 | `journal.entry_created` | An act is recorded | Act-count dashboards |
 | `compliance.expiring` | A credential nears expiry | Renewal nudge |
+| `request.created` | Someone sends a request through your link | Text the notary at once; start a speed-to-lead sequence |
+| `request.accepted` | You accept a request | Confirmation text to the requester with date, time and what to have ready |
 
 Set up in **Settings → Integrations**: paste the URL from a GoHighLevel *Inbound
 Webhook* trigger, pick your events, send a test, then map the sample payload in
@@ -121,7 +134,11 @@ adapter statically, so only the one you actually use is ever required.
 3. Build command `npm run build` (which runs `prisma generate` first), install
    command `npm install`.
 4. Apply the schema once with `npx prisma migrate deploy`, then optionally
-   `npm run db:seed`.
+   `npm run db:seed`. Later releases add migrations (Find Work adds two tables
+   and some columns; the IRS mileage rate becomes fractional so 72.5¢ is stored
+   exactly) — run `migrate deploy` again after pulling, and re-check the
+   `anon` privilege query below, which should still report `false` for every
+   table including the new ones.
 
 Both variables are runtime requirements, not build ones — `npm run build`
 completes with neither of them set, and every route is server-rendered on
@@ -156,7 +173,7 @@ schema and serves that schema through PostgREST. The key that authenticates
 `anon` is meant to be shipped to browsers. Applying this schema and stopping
 there leaves the journal readable *and writable* by anyone who has that key —
 signer addresses, ID last-4s, and the competency notes a notary writes at a
-bedside, plus the ability to insert journal rows that were never notarised.
+bedside, plus the ability to insert journal rows that were never notarized.
 
 This app never uses PostgREST; it talks to Postgres directly. So revoke the
 API roles outright rather than trying to write policies for them:
@@ -209,10 +226,12 @@ bad first impression, and the fix is a page reload away, not a redeploy.
 ### Going back to SQLite for local work
 
 Set `DATABASE_URL="file:./dev.db"`, change the provider in
-`prisma/schema.prisma` back to `sqlite`, and restore the archived migrations
-from `prisma/migrations.sqlite`. The schema itself needs no other change — it is
-written to the intersection of both engines (no Prisma enums, no scalar lists,
-integer cents rather than floats).
+`prisma/schema.prisma` back to `sqlite`, and create the database with
+`npx prisma db push`. Do not run `migrate deploy`: the committed migrations are
+PostgreSQL SQL. The schema itself needs no other change — it is written to the
+intersection of both engines (no Prisma enums, no scalar lists, comma-separated
+strings where a list is needed, and integer cents for money; the one float is
+the IRS per-mile rate, which can be a half cent).
 
 Journals survive the move. The demo journal in this repo was sealed under
 SQLite, copied into PostgreSQL, and read back; `tests/journal-migration.vitest.ts`
@@ -245,7 +264,7 @@ rather than printable separators, so a document type of `Deed` with a
 description of `of Trust` cannot collide with `Deedof` / `Trust`.
 
 **What this does not prove.** Anyone with database access can rewrite rows *and*
-recompute every digest. The defence is external: record your head digest
+recompute every digest. The defense is external: record your head digest
 somewhere outside the system — email it to yourself monthly, or write it in a
 notebook. A digest held elsewhere on a known date turns "internally consistent"
 into "provably unchanged since then". The verify page says this in plain
@@ -266,7 +285,24 @@ language rather than overselling the guarantee.
 - **Sessions** are opaque random tokens stored server-side, not JWTs, so they
   can actually be revoked. The database holds an HMAC of the token, not the
   token.
-- **Money** is integer cents everywhere.
+- **Money** is integer cents everywhere. The IRS per-mile rate is the one
+  fractional value (72.5¢ for the first half of 2026), stored exactly and valued
+  at the rate in force on the notary's calendar day.
+- **Time zones.** A notary's day is in their own zone, and a hosted server runs
+  in UTC. Date and time fields typed into forms are read in the notary's zone
+  (`interpretWallClock`), calendar dates are stored at noon so they cannot slip a
+  day, and "today", "this month", the tax year, journal date ranges and expiry
+  checks all use the notary's zone. The tests assert absolute instants, so they
+  pass under any process zone.
+- **Forms keep what you typed.** React 19 resets an uncontrolled form when its
+  action finishes — including when the action rejected the input. Every form
+  that submits to a server action renders `<ActionForm>`, which avoids that, and
+  `tests/forms.vitest.ts` fails if a form goes back to a bare `<form action>`.
+  Cross-field validation rules run even when another field failed, so one submit
+  reports every mistake.
+- **The public pages** (`/n/…`) are the only unauthenticated writes. They read the
+  notary through an allow-listed `select` (`src/lib/public-notary.ts`), never the
+  whole row; a test fails if a private column is named there.
 - **CSV exports** neutralise formula injection — a signer named `=cmd|...` must
   not execute when an accountant opens the file.
 

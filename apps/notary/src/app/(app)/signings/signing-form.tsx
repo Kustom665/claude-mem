@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { ActionForm } from '@/components/action-form';
 import {
   Button,
   Card,
@@ -105,7 +106,7 @@ export function SigningForm({
   }, [miles, mileageRateCents]);
 
   return (
-    <form action={formAction} className="space-y-5">
+    <ActionForm action={formAction} className="space-y-5">
       <FormError message={errors._form} />
 
       <Card>
@@ -114,7 +115,7 @@ export function SigningForm({
             label="Title"
             htmlFor="title"
             error={errors.title}
-            hint="How you will recognise it in a list."
+            hint="How you will recognize it in a list."
             required
           >
             <Input
@@ -427,6 +428,6 @@ export function SigningForm({
           </span>
         ) : null}
       </div>
-    </form>
+    </ActionForm>
   );
 }

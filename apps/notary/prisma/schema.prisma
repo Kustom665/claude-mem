@@ -65,10 +65,28 @@ model User {
 
   // Preferences
   timezone           String @default("America/Los_Angeles")
-  mileageRateCents   Int    @default(70)
+  mileageRateCents   Float  @default(70)
   journalStartNumber Int    @default(1)
   invoicePrefix      String @default("INV")
   invoiceTermsDays   Int    @default(30)
+
+  // Public request link, served at /n/{publicSlug}. Off until the notary turns
+  // it on, and every field here is something the notary chose to publish.
+  publicSlug            String?  @unique
+  acceptingRequests     Boolean  @default(false)
+  publicHeadline        String?
+  publicBio             String?
+  serviceArea           String?
+  /// Comma-separated REQUEST_SERVICES values the notary will take on.
+  servicesOffered       String   @default("")
+  requestMinNoticeHours Int      @default(24)
+  showFeesPublicly      Boolean  @default(true)
+  showPhonePublicly     Boolean  @default(false)
+
+  /// Comma-separated requirement keys the notary says they already hold (a
+  /// certification, a W-9 on file). Facts about the notary, not about any one
+  /// application, so they are kept once and read everywhere.
+  readinessChecklist String @default("")
 
   // Subscription seam. Billing is not wired to a payment processor yet; these
   // fields exist so gating can be added without a migration.
@@ -89,8 +107,102 @@ model User {
   certificateTemplates CertificateTemplate[]
   integrations         Integration[]
   webhookDeliveries    WebhookDelivery[]
+  sourceApplications   SourceApplication[]
+  workRequests         WorkRequest[]
 
   @@index([email])
+}
+
+// ---------------------------------------------------------------------------
+// Finding work.
+//
+// SourceApplication is the notary's own pipeline of places they are trying to
+// get work from. The directory of known sources is reference data in
+// src/lib/work-sources.ts, not a table: it is dated, sourced, and changes with
+// the code review that changes it. `sourceKey` points into that directory;
+// it is null for a prospect the notary added themselves.
+// ---------------------------------------------------------------------------
+
+model SourceApplication {
+  id     String @id @default(cuid())
+  userId String
+
+  sourceKey String?
+  name      String
+  category  String  @default("OTHER")
+  status    String  @default("RESEARCHING")
+  website   String?
+
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+
+  appliedOn      DateTime?
+  approvedOn     DateTime?
+  lastContactOn  DateTime?
+  nextFollowUpOn DateTime?
+
+  notes String?
+
+  /// The Client created when this source starts sending work.
+  clientId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sourceKey])
+  @@index([userId, status])
+  @@index([userId, nextFollowUpOn])
+}
+
+// ---------------------------------------------------------------------------
+// WorkRequest — an inbound request from the public request link.
+//
+// The requester is a member of the public, not a user, so there is no account
+// behind these rows. They hold contact details, so the notary can delete them,
+// and nothing in the form invites ID numbers or document contents.
+// ---------------------------------------------------------------------------
+
+model WorkRequest {
+  id     String @id @default(cuid())
+  userId String
+
+  status String @default("NEW")
+
+  requesterName    String
+  requesterPhone   String?
+  requesterEmail   String?
+  preferredContact String  @default("ANY")
+
+  service         String
+  documentSummary String?
+  signerCount     Int     @default(1)
+
+  preferredDate   DateTime?
+  preferredWindow String    @default("FLEXIBLE")
+
+  addressLine1 String?
+  city         String?
+  state        String?
+  postalCode   String?
+  message      String?
+
+  /// The signing created when the request was accepted.
+  signingId String?
+
+  /// HMAC of the requester's address, used only to rate-limit abuse. The raw
+  /// address is never stored.
+  ipHash String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt])
+  @@index([ipHash, createdAt])
 }
 
 // ---------------------------------------------------------------------------
@@ -362,7 +474,7 @@ model MileageEntry {
 
   date             DateTime
   miles            Float
-  ratePerMileCents Int
+  ratePerMileCents Float
   purpose          String
   fromAddress      String?
   toAddress        String?

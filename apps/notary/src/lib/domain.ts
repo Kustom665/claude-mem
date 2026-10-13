@@ -167,6 +167,129 @@ export const FEE_UNIT_LABELS: Record<FeeUnit, string> = {
   PER_HOUR: 'Per hour',
 };
 
+// ---------------------------------------------------------------------------
+// Finding work
+// ---------------------------------------------------------------------------
+
+/** The channels notarization work arrives through. */
+export const SOURCE_CATEGORIES = [
+  'SIGNING_SERVICE',
+  'TITLE_ESCROW',
+  'LENDER_BANK',
+  'LAW_FIRM',
+  'HEALTHCARE_SENIOR',
+  'REAL_ESTATE',
+  'APOSTILLE_INTL',
+  'DIRECTORY',
+  'RON_PLATFORM',
+  'OTHER',
+] as const;
+export type SourceCategory = (typeof SOURCE_CATEGORIES)[number];
+
+export const SOURCE_CATEGORY_LABELS: Record<SourceCategory, string> = {
+  SIGNING_SERVICE: 'Signing services & dispatch platforms',
+  TITLE_ESCROW: 'Title, escrow & closing attorneys',
+  LENDER_BANK: 'Lenders, brokers & banks',
+  LAW_FIRM: 'Law firms',
+  HEALTHCARE_SENIOR: 'Healthcare & senior living',
+  REAL_ESTATE: 'Real estate & property managers',
+  APOSTILLE_INTL: 'Apostille & international documents',
+  DIRECTORY: 'Directories & lead marketplaces',
+  RON_PLATFORM: 'Remote online notarization platforms',
+  OTHER: 'Other',
+};
+
+/** Where a notary's pursuit of one work source stands. */
+export const PIPELINE_STATUSES = [
+  'RESEARCHING',
+  'APPLIED',
+  'ONBOARDING',
+  'APPROVED',
+  'ACTIVE',
+  'DECLINED',
+  'DORMANT',
+] as const;
+export type PipelineStatus = (typeof PIPELINE_STATUSES)[number];
+
+export const PIPELINE_STATUS_LABELS: Record<PipelineStatus, string> = {
+  RESEARCHING: 'Researching',
+  APPLIED: 'Applied',
+  ONBOARDING: 'Onboarding',
+  APPROVED: 'Approved — on the list',
+  ACTIVE: 'Receiving work',
+  DECLINED: 'Declined',
+  DORMANT: 'Gone quiet',
+};
+
+/** Statuses where an answer is still pending, so a follow-up date matters. */
+export const PIPELINE_OPEN_STATUSES: ReadonlySet<PipelineStatus> = new Set<PipelineStatus>([
+  'RESEARCHING',
+  'APPLIED',
+  'ONBOARDING',
+  'APPROVED',
+]);
+
+/** Inbound requests captured by the public request link. */
+export const REQUEST_STATUSES = ['NEW', 'CONTACTED', 'ACCEPTED', 'DECLINED', 'SPAM'] as const;
+export type RequestStatus = (typeof REQUEST_STATUSES)[number];
+
+export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
+  NEW: 'New',
+  CONTACTED: 'Contacted',
+  ACCEPTED: 'Accepted',
+  DECLINED: 'Declined',
+  SPAM: 'Spam',
+};
+
+export const REQUEST_SERVICES = [
+  'GENERAL',
+  'LOAN_SIGNING',
+  'ESTATE_PLANNING',
+  'REAL_ESTATE',
+  'INTERNATIONAL',
+  'OTHER',
+] as const;
+export type RequestService = (typeof REQUEST_SERVICES)[number];
+
+export const REQUEST_SERVICE_LABELS: Record<RequestService, string> = {
+  GENERAL: 'General notarization (affidavits, forms, letters)',
+  LOAN_SIGNING: 'Mortgage or loan signing',
+  ESTATE_PLANNING: 'Wills, powers of attorney, healthcare directives',
+  REAL_ESTATE: 'Deeds and other real estate documents',
+  INTERNATIONAL: 'Documents for international use (apostille)',
+  OTHER: 'Something else',
+};
+
+/** What a request becomes on the calendar once it is accepted. */
+export const REQUEST_SERVICE_TO_SIGNING_TYPE: Record<RequestService, SigningType> = {
+  GENERAL: 'GENERAL_NOTARY_WORK',
+  LOAN_SIGNING: 'LOAN_SIGNING',
+  ESTATE_PLANNING: 'ESTATE_PLANNING',
+  REAL_ESTATE: 'GENERAL_NOTARY_WORK',
+  INTERNATIONAL: 'APOSTILLE',
+  OTHER: 'OTHER',
+};
+
+export const CONTACT_PREFERENCES = ['ANY', 'PHONE', 'TEXT', 'EMAIL'] as const;
+export type ContactPreference = (typeof CONTACT_PREFERENCES)[number];
+
+export const CONTACT_PREFERENCE_LABELS: Record<ContactPreference, string> = {
+  ANY: 'Any',
+  PHONE: 'Phone call',
+  TEXT: 'Text message',
+  EMAIL: 'Email',
+};
+
+export const TIME_WINDOWS = ['FLEXIBLE', 'MORNING', 'AFTERNOON', 'EVENING'] as const;
+export type TimeWindow = (typeof TIME_WINDOWS)[number];
+
+export const TIME_WINDOW_LABELS: Record<TimeWindow, string> = {
+  FLEXIBLE: 'Flexible',
+  MORNING: 'Morning (8 am – noon)',
+  AFTERNOON: 'Afternoon (noon – 5 pm)',
+  EVENING: 'Evening (after 5 pm)',
+};
+
 export const US_STATES = [
   ['AL', 'Alabama'], ['AK', 'Alaska'], ['AZ', 'Arizona'], ['AR', 'Arkansas'],
   ['CA', 'California'], ['CO', 'Colorado'], ['CT', 'Connecticut'], ['DE', 'Delaware'],

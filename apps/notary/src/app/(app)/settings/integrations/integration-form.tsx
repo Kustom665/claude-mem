@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { ActionForm } from '@/components/action-form';
 import {
   Button,
   Card,
@@ -38,7 +39,7 @@ export function IntegrationForm({
   const subscribed = new Set(values.subscribed);
 
   return (
-    <form action={formAction}>
+    <ActionForm action={formAction}>
       <Card>
         <CardHeader
           title="GoHighLevel webhook"
@@ -91,6 +92,6 @@ export function IntegrationForm({
           </div>
         </CardBody>
       </Card>
-    </form>
+    </ActionForm>
   );
 }

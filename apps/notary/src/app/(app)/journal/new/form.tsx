@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { ActionForm } from '@/components/action-form';
 import {
   Alert,
   Button,
@@ -139,7 +140,7 @@ export function JournalEntryForm({
   const overCap = feeCapCents !== null && feeCents !== null && feeCents > feeCapCents;
 
   return (
-    <form action={formAction} className="space-y-5">
+    <ActionForm action={formAction} className="space-y-5">
       <FormError message={errors._form} />
 
       {amending ? (
@@ -237,7 +238,7 @@ export function JournalEntryForm({
           </Field>
 
           <Field
-            label="Number of signatures notarised"
+            label="Number of signatures notarized"
             htmlFor="numberOfSignatures"
             error={errors.numberOfSignatures}
           >
@@ -281,13 +282,13 @@ export function JournalEntryForm({
         <Alert tone="warning" title="This act requires an oath or affirmation">
           A {ACT_TYPE_LABELS[actType].toLowerCase()} is only valid if you actually administered the
           oath or affirmation and the signer responded. Ceremonial words matter here — an unsworn
-          jurat is a defective notarisation.
+          jurat is a defective notarization.
         </Alert>
       ) : null}
 
       <Card>
         <CardBody>
-          <Fieldset legend="Signer" description="Recorded in the journal as the person whose signature you notarised.">
+          <Fieldset legend="Signer" description="Recorded in the journal as the person whose signature you notarized.">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Full name" htmlFor="signerName" error={errors.signerName} required>
                 <Input
@@ -451,7 +452,7 @@ export function JournalEntryForm({
         >
           {thumbprintRequired
             ? 'California Government Code §8206 requires the signer’s right thumbprint in your journal for powers of attorney and documents affecting real property. The entry cannot be sealed without it.'
-            : 'A thumbprint is not required in your state, but it is the strongest evidence available if this notarisation is ever challenged.'}
+            : 'A thumbprint is not required in your state, but it is the strongest evidence available if this notarization is ever challenged.'}
         </Alert>
       ) : null}
 
@@ -562,7 +563,7 @@ export function JournalEntryForm({
       {rules.requiresFeeDisclosure ? (
         <Alert tone="info">
           {rules.commissionState} requires you to disclose your fees to the client before performing
-          the act. Non-notarial charges must be itemised and agreed in advance.
+          the act. Non-notarial charges must be itemized and agreed in advance.
         </Alert>
       ) : null}
 
@@ -575,6 +576,6 @@ export function JournalEntryForm({
       <div className="flex flex-wrap gap-2">
         <SubmitButton />
       </div>
-    </form>
+    </ActionForm>
   );
 }

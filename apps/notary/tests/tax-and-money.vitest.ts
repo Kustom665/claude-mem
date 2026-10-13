@@ -64,6 +64,25 @@ describe('irsMileageRateCents', () => {
     expect(irsMileageRateCents(new Date('2026-11-02'))).toBe(76);
     expect(irsMileageRateCents(new Date('2025-05-01'))).toBe(70);
   });
+
+  it('changes at midnight on the notary’s calendar, not in UTC', () => {
+    // 21:00 on 30 June in New York is 01:00Z on 1 July. By the notary's clock it is
+    // still the June rate; reading the UTC date would value the trip at 76c.
+    const nineOnTheThirtieth = new Date('2026-07-01T01:00:00Z');
+    expect(irsMileageRateCents(nineOnTheThirtieth, 'America/New_York')).toBe(72.5);
+    expect(irsMileageRateCents(nineOnTheThirtieth)).toBe(76);
+
+    // And the first minute of 1 July in New York (04:00Z) is the new rate.
+    expect(irsMileageRateCents(new Date('2026-07-01T04:00:00Z'), 'America/New_York')).toBe(76);
+    // Hawaii is five hours behind New York, so the same instant is still June there.
+    expect(irsMileageRateCents(new Date('2026-07-01T04:00:00Z'), 'Pacific/Honolulu')).toBe(72.5);
+  });
+
+  it('keeps the half cent: the stored rate is not rounded', () => {
+    expect(irsMileageRateCents(new Date('2026-03-15'), 'America/New_York')).toBe(72.5);
+    // 100 miles at 72.5c is $72.50, not the $73.00 a rounded 73c would claim.
+    expect(Math.round(100 * irsMileageRateCents(new Date('2026-03-15'), 'America/New_York'))).toBe(7250);
+  });
 });
 
 describe('summarizeMileage', () => {

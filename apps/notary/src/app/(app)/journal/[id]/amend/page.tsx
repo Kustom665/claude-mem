@@ -7,7 +7,7 @@ import {
   journalFieldRulesFor,
   requiresFeeDisclosure,
 } from '@/lib/compliance';
-import { toDateTimeInputValue } from '@/lib/dates';
+import { formatDate, toDateTimeInputValue } from '@/lib/dates';
 import { OPEN_SIGNING_STATUSES } from '@/lib/domain';
 import { PageHeader } from '@/components/ui';
 import { JournalEntryForm, type JournalFormRules } from '../../new/form';
@@ -83,7 +83,7 @@ export default async function AmendJournalEntryPage({
           rules={rules}
           signings={signings.map((signing) => ({
             id: signing.id,
-            label: `${signing.title} — ${signing.scheduledAt.toLocaleDateString('en-US')}`,
+            label: `${signing.title} — ${formatDate(signing.scheduledAt, user.timezone)}`,
           }))}
           defaults={{
             // The act itself happened when it happened — carry the original

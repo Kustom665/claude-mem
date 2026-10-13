@@ -3,7 +3,7 @@ import { requireUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { MILEAGE_RATE_NOTE, MILEAGE_RATE_SOURCE, irsMileageRateCents } from '@/lib/compliance';
 import { formatCents } from '@/lib/money';
-import { formatDate, startOfYear } from '@/lib/dates';
+import { formatDate, toDateInputValue, yearBoundsInZone, yearInZone } from '@/lib/dates';
 import { summarizeMileage } from '@/lib/tax';
 import {
   Alert,
@@ -25,7 +25,8 @@ export const metadata: Metadata = { title: 'Mileage' };
 
 export default async function MileagePage() {
   const user = await requireUser();
-  const yearStart = startOfYear(new Date());
+  // The tax year as the notary lives it, not as the server's clock sees it.
+  const yearStart = yearBoundsInZone(yearInZone(new Date(), user.timezone), user.timezone).start;
 
   const [entries, yearEntries, signings] = await Promise.all([
     prisma.mileageEntry.findMany({
@@ -163,10 +164,11 @@ export default async function MileagePage() {
             <CardHeader title="Log a trip" />
             <div className="px-5 py-4">
               <MileageForm
-                defaultRateCents={Math.round(irsMileageRateCents())}
+                defaultRateCents={irsMileageRateCents(new Date(), user.timezone)}
+                today={toDateInputValue(new Date(), user.timezone)}
                 signings={signings.map((signing) => ({
                   id: signing.id,
-                  label: `${signing.title} — ${signing.scheduledAt.toLocaleDateString('en-US')}`,
+                  label: `${signing.title} — ${formatDate(signing.scheduledAt, user.timezone)}`,
                 }))}
               />
             </div>

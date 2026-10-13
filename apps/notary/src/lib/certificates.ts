@@ -74,7 +74,7 @@ On this, the {{date}}, before me, the undersigned notary public, personally
 appeared {{signer_name}}, known to me (or satisfactorily proven) to be the
 person whose name is subscribed to the within instrument, who acknowledged
 himself or herself to be the {{capacity}} of {{principal_name}}, and that he or
-she as such {{capacity}}, being authorised to do so, executed the foregoing
+she as such {{capacity}}, being authorized to do so, executed the foregoing
 instrument for the purposes therein contained by signing the name of
 {{principal_name}} by himself or herself as {{capacity}}.
 
@@ -322,4 +322,4 @@ export function placeholdersIn(body: string): Placeholder[] {
 export const CERTIFICATE_DISCLAIMER =
   'These are starting points, not legal advice. Confirm the wording against the certificate forms ' +
   'your commissioning authority publishes, and never attach a certificate to a document you did ' +
-  'not personally notarise.';
+  'not personally notarize.';
