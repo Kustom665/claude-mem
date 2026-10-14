@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach, afterAll, mock } from 'bun:test';
+
+// Snapshot the real module namespace BEFORE mock.module mutates the live,
+// process-global registry. bun's mock.module is sticky and mock.restore() does
+// NOT undo it, so we re-register this snapshot in afterAll. The spread must run
+// as an executable statement textually before the mock.module call so it
+// captures the real exports before the registry is clobbered.
+import * as realModeManagerNs from '../../src/services/domain/ModeManager.js';
+const realModeManager = { ...realModeManagerNs };
 
 mock.module('../../src/services/domain/ModeManager.js', () => ({
   ModeManager: {
@@ -91,6 +99,10 @@ describe('SearchManager.timeline() anchor dispatch', () => {
   let search: SessionSearch;
   let manager: SearchManager;
   let seeded: SeededObservation[];
+
+  afterAll(() => {
+    mock.module('../../src/services/domain/ModeManager.js', () => realModeManager);
+  });
 
   beforeEach(() => {
     db = new Database(':memory:');
