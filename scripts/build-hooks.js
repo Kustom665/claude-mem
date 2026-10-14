@@ -295,6 +295,12 @@ async function buildHooks() {
         'zod',
         'cohere-ai',
         'ollama',
+        // posthog-node's error-tracking module does `await import('@opentelemetry/api')`
+        // to stamp events with the active trace id. OpenTelemetry is an optional peer we
+        // don't ship, and the import sits in a try/catch that falls back to no trace
+        // properties — so leaving it unresolved is the intended behaviour. Bundling it
+        // isn't possible (the package isn't installed) and fails the build outright.
+        '@opentelemetry/api',
         '@chroma-core/default-embed',
         'onnxruntime-node',
         // better-auth (~3.7MB) is only reachable through BetterAuthRoutes' request-time
