@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "User" ALTER COLUMN "mileageRateCents" SET DEFAULT 70,
+ALTER COLUMN "mileageRateCents" SET DATA TYPE DOUBLE PRECISION;
+
+-- AlterTable
+ALTER TABLE "MileageEntry" ALTER COLUMN "ratePerMileCents" SET DATA TYPE DOUBLE PRECISION;

@@ -1,0 +1,47 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# production
+build/
+dist/
+
+# local env
+.env
+.env*.local
+
+# database (local dev SQLite)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+prisma/dev.db*
+
+# generated Prisma client — rebuilt by `prisma generate`, which `npm run build`
+# and `npm run setup` both run
+src/generated/
+
+# testing
+coverage/
+
+# misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+
+# The repo root .gitignore excludes package-lock.json globally.
+# This app is a standalone deployable, so its lockfile must be committed.
+!package-lock.json
+
+# The repo root .gitignore excludes every directory named `reports/` (local
+# session artifacts). This app has a /reports route, whose page lives in
+# src/app/(app)/reports/ — without this line git silently skips it, the build
+# succeeds without it, and the nav link 404s in production. tests/routes.vitest.ts
+# fails if a linked page is missing from a clean checkout.
+!reports/
