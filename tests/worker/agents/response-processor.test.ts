@@ -1,5 +1,19 @@
-import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from 'bun:test';
+import { describe, it, expect, mock, afterAll, beforeEach, afterEach, spyOn } from 'bun:test';
 import { logger } from '../../../src/utils/logger.js';
+
+// Snapshot the real module namespaces BEFORE mock.module mutates the live,
+// process-global registry. bun's mock.module is sticky and mock.restore() does
+// NOT undo it, so we re-register these snapshots in afterAll. Without that,
+// every test file that runs after this one in the same bun process sees the
+// stubs below — e.g. tests/server/server-beta-boot.test.ts spying on the real
+// `ModeManager.prototype` (undefined on the stub) and tests/sdk/parser.test.ts
+// reading the stub's observation_types.
+import * as realModeManagerNs from '../../../src/services/domain/ModeManager.js';
+import * as realWorkerUtilsNs from '../../../src/shared/worker-utils.js';
+import * as realWorkerServiceNs from '../../../src/services/worker-service.js';
+const realModeManager = { ...realModeManagerNs };
+const realWorkerUtils = { ...realWorkerUtilsNs };
+const realWorkerService = { ...realWorkerServiceNs };
 
 mock.module('../../../src/services/worker-service.js', () => ({
   updateCursorContextForProject: () => Promise.resolve(),
@@ -34,6 +48,12 @@ import type { DatabaseManager } from '../../../src/services/worker/DatabaseManag
 import type { SessionManager } from '../../../src/services/worker/SessionManager.js';
 
 let loggerSpies: ReturnType<typeof spyOn>[] = [];
+
+afterAll(() => {
+  mock.module('../../../src/services/worker-service.js', () => realWorkerService);
+  mock.module('../../../src/shared/worker-utils.js', () => realWorkerUtils);
+  mock.module('../../../src/services/domain/ModeManager.js', () => realModeManager);
+});
 
 describe('ResponseProcessor', () => {
   let mockStoreObservations: ReturnType<typeof mock>;

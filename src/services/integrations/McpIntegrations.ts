@@ -9,9 +9,10 @@ import { injectContextIntoMarkdownFile } from '../../utils/context-injection.js'
 
 const PLACEHOLDER_CONTEXT = `# claude-mem: Cross-Session Memory
 
-*No context yet. Complete your first session and context will appear here.*
+*This host uses claude-mem's MCP-only integration: transcript capture is not
+available, so this file is not updated automatically.*
 
-Use claude-mem's MCP search tools for manual memory queries.`;
+Use claude-mem's MCP search tools to query memories from past sessions.`;
 
 function buildMcpServerEntry(mcpServerPath: string): { command: string; args: string[] } {
   return {
@@ -42,7 +43,8 @@ function writeMcpJsonConfig(
 interface McpInstallerConfig {
   ideId: string;
   ideLabel: string;
-  configPath: string;
+  /** Absolute config path, or a resolver for hosts whose path moved between versions. */
+  configPath: string | (() => string);
   configKey: 'servers' | 'mcpServers';
   contextFile?: {
     path: string;
@@ -61,7 +63,8 @@ function installMcpIntegration(config: McpInstallerConfig): () => Promise<number
       return 1;
     }
 
-    const configPath = config.configPath;
+    const configPath =
+      typeof config.configPath === 'function' ? config.configPath() : config.configPath;
 
     const skipWarpConfigWrite = config.ideId === 'warp' && !existsSync(path.dirname(configPath));
 
@@ -130,10 +133,29 @@ const COPILOT_CLI_CONFIG: McpInstallerConfig = {
   },
 };
 
+/**
+ * Antigravity 2.0 (IDE + CLI) reads a central `~/.gemini/config/mcp_config.json`.
+ * Installs predating that move still read `~/.gemini/antigravity/mcp_config.json`,
+ * so write to the legacy file only when it is the one that actually exists.
+ */
+const ANTIGRAVITY_MCP_CONFIG_PATH = path.join(homedir(), '.gemini', 'config', 'mcp_config.json');
+const ANTIGRAVITY_LEGACY_MCP_CONFIG_PATH = path.join(
+  homedir(),
+  '.gemini',
+  'antigravity',
+  'mcp_config.json',
+);
+
+export function resolveAntigravityMcpConfigPath(): string {
+  if (existsSync(ANTIGRAVITY_MCP_CONFIG_PATH)) return ANTIGRAVITY_MCP_CONFIG_PATH;
+  if (existsSync(ANTIGRAVITY_LEGACY_MCP_CONFIG_PATH)) return ANTIGRAVITY_LEGACY_MCP_CONFIG_PATH;
+  return ANTIGRAVITY_MCP_CONFIG_PATH;
+}
+
 const ANTIGRAVITY_CONFIG: McpInstallerConfig = {
   ideId: 'antigravity',
   ideLabel: 'Antigravity',
-  configPath: path.join(homedir(), '.gemini', 'antigravity', 'mcp_config.json'),
+  configPath: resolveAntigravityMcpConfigPath,
   configKey: 'mcpServers',
   contextFile: {
     path: path.join(process.cwd(), '.agents', 'rules', 'claude-mem-context.md'),
