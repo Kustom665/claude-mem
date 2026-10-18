@@ -1,0 +1,13 @@
+import { BASE, check, launch, login, summarize, watch } from './lib.mjs';
+const results = [];
+const problems = [];
+const { browser, context } = await launch();
+const page = await context.newPage();
+watch(page, problems);
+await login(page);
+await page.goto(`${BASE}/journal/verify`);
+const text = await page.locator('main').innerText();
+check(results, 'the journal chain still verifies after entries added through the app', /Verified|intact|No problems|0 problems|unbroken/i.test(text) && !/failed|broken|problem(s)? (was|were) found/i.test(text), text.slice(0, 300).replace(/\n/g, ' | '));
+const ok = summarize(results, problems);
+await browser.close();
+process.exit(ok ? 0 : 1);
