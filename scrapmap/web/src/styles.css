@@ -1,0 +1,139 @@
+@import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
+
+/*
+ * ScrapMap runs on a phone, in a driveway, in the sun. The palette is dark so
+ * the screen is readable outdoors, with copper as the one accent — it is
+ * literally the product.
+ */
+@theme {
+  --color-copper-50: #fdf5ee;
+  --color-copper-100: #f7e3d0;
+  --color-copper-200: #eec4a1;
+  --color-copper-300: #e0a06d;
+  --color-copper-400: #d1813f;
+  --color-copper-500: #b87333;
+  --color-copper-600: #9a5b28;
+  --color-copper-700: #7a4622;
+  --color-copper-800: #5b3520;
+  --color-copper-900: #3d251a;
+
+  --color-ink-700: #2a2a30;
+  --color-ink-800: #1f1f23;
+  --color-ink-850: #1a1a1e;
+  --color-ink-900: #141417;
+  --color-ink-950: #0d0d0f;
+
+  --font-sans: 'Inter var', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-ink-950 text-zinc-200 antialiased;
+    font-family: var(--font-sans);
+    /* Respect the notch on phones held in a truck cab. */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-copper-400;
+  }
+
+  /* Leaflet ships light chrome; tone it down to match the shell. */
+  .leaflet-container {
+    @apply bg-ink-900 font-sans;
+  }
+
+  .leaflet-control-attribution {
+    @apply bg-ink-900/85! text-[10px]! text-zinc-400!;
+  }
+
+  .leaflet-control-attribution a {
+    @apply text-copper-300!;
+  }
+
+  .leaflet-bar a {
+    @apply bg-ink-800! text-zinc-200! border-ink-700!;
+  }
+
+  .leaflet-bar a:hover {
+    @apply bg-ink-700!;
+  }
+
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip {
+    @apply bg-ink-800! text-zinc-200! shadow-xl!;
+  }
+
+  .leaflet-popup-content {
+    @apply m-0! w-[15rem]!;
+  }
+
+  .leaflet-popup-close-button {
+    @apply text-zinc-400!;
+  }
+}
+
+@layer components {
+  /*
+   * Tailwind v4 only lets @apply reference real utilities, not other custom
+   * classes, so the shared button base is a grouped selector rather than a
+   * `.btn` the variants compose from.
+   */
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm
+           font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-copper-500 text-white hover:bg-copper-400 active:bg-copper-600;
+  }
+
+  .btn-secondary {
+    @apply border border-zinc-700 bg-ink-800 text-zinc-200 hover:border-zinc-600 hover:bg-ink-700;
+  }
+
+  .btn-ghost {
+    @apply text-zinc-400 hover:bg-ink-800 hover:text-zinc-100;
+  }
+
+  .btn-danger {
+    @apply border border-red-900/60 bg-red-950/40 text-red-300 hover:bg-red-950/70;
+  }
+
+  .card {
+    @apply rounded-xl border border-zinc-800 bg-ink-900;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-sm font-medium text-zinc-300;
+  }
+
+  .field {
+    @apply w-full rounded-lg border border-zinc-700 bg-ink-850 px-3 py-2.5 text-sm text-zinc-100
+           placeholder:text-zinc-500 focus:border-copper-500 focus:ring-1 focus:ring-copper-500
+           focus:outline-none;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+}
+
+/* Reduce motion for anyone who has asked the OS for it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

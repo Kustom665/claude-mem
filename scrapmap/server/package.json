@@ -1,0 +1,27 @@
+{
+  "name": "@scrapmap/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "node --disable-warning=ExperimentalWarning --watch --experimental-strip-types src/index.ts",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-schema.mjs",
+    "start": "node --disable-warning=ExperimentalWarning dist/index.js",
+    "seed": "node --disable-warning=ExperimentalWarning --experimental-strip-types src/db/seed.ts",
+    "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test src/test/api.checks.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check:apis": "node --disable-warning=ExperimentalWarning --experimental-strip-types src/scripts/check-apis.ts"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.18.11",
+    "typescript": "^5.9.3"
+  }
+}
