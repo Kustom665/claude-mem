@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, mock, afterAll } from 'bun:test';
+
+// Snapshot the real ModeManager namespace BEFORE mock.module mutates the live,
+// process-global registry. bun's mock.module is sticky and mock.restore() does
+// NOT undo it, so the stub is re-registered as the real module in afterAll —
+// otherwise every test file running later in the same bun process sees this
+// stub instead of the real ModeManager.
+import * as realModeManagerNs from '../../../src/services/domain/ModeManager.js';
+const realModeManager = { ...realModeManagerNs };
 
 mock.module('../../../src/services/domain/ModeManager.js', () => ({
   ModeManager: {
@@ -39,6 +47,10 @@ mock.module('../../../src/services/domain/ModeManager.js', () => ({
     }),
   },
 }));
+
+afterAll(() => {
+  mock.module('../../../src/services/domain/ModeManager.js', () => realModeManager);
+});
 
 import { ResultFormatter } from '../../../src/services/worker/search/ResultFormatter.js';
 import type { ObservationSearchResult, SessionSummarySearchResult, UserPromptSearchResult, SearchResults } from '../../../src/services/worker/search/types.js';
