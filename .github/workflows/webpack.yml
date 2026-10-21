@@ -1,4 +1,4 @@
-name: NodeJS with Webpack
+name: Build (Node matrix)
 
 on:
   push:
@@ -9,10 +9,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
+        # package.json declares engines.node >= 20.0.0, so those are the
+        # versions worth proving. ci.yml builds on 20 only; this adds 22.
+        node-version: ['20', '22']
 
     steps:
     - uses: actions/checkout@v4
@@ -22,7 +25,13 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
-    - name: Build
-      run: |
-        npm install
-        npx webpack
+    - run: npm install --no-audit --no-fund
+
+    # Build only, as in windows.yml: build-and-sync also runs the marketplace
+    # sync and a worker restart from a hardcoded ~/.claude/plugins path that
+    # doesn't exist on CI.
+    #
+    # Bun is deliberately not installed here. gen-plugin-lockfile.cjs skips
+    # regeneration when bun is off PATH, so this job covers the node-only
+    # build path — the one a contributor hits before installing bun.
+    - run: npm run build
